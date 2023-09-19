@@ -56,3 +56,6 @@ Features
 🔒 Security Audit Tool
 
     Scan for potential vulnerabilities and get suggestions for security enhancements.
+    
+# Well that is the plan anyways, currently playing around with a python x powershell blend of GUI and will reuse most of the code found in [AIO](https://github.com/coff33ninja/AIO) wich is in archive state.
+# It started to get boring the way the whole application was layed out, the way I version numbered, everything else I did wrong. Using [AIO](https://github.com/coff33ninja/AIO) as a stepping stone to get the "All-Purpose" toolbox for Windows that is easy to use and understand. 
