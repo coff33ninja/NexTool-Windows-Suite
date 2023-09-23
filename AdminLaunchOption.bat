@@ -38,5 +38,13 @@ cd /d %~dp0
 if '%1'=='ELEV' (del "%vbsGetPrivileges%" 1>nul 2>nul  &  shift /1)
 
 cls
+
+:Install Nessesary Python Libraries
+pip install ttkthemes
+pip install psutil
+pip install WMI
+
+cls
+
 python NexTool.py
 pause

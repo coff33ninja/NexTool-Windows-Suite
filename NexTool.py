@@ -1,6 +1,5 @@
-import sys
 import tkinter as tk
-from tkinter import ttk, scrolledtext
+from tkinter import ttk, scrolledtext, messagebox
 from ttkthemes import ThemedTk
 from datetime import datetime
 import psutil
@@ -8,7 +7,6 @@ import platform
 import wmi
 import urllib.request
 import webbrowser
-from tkinter import messagebox
 import os
 import subprocess
 import sys
