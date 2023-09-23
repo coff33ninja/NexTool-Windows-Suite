@@ -1,12 +1,15 @@
+import sys
 import tkinter as tk
-from tkinter import ttk, scrolledtext, messagebox
+from tkinter import ttk, scrolledtext
 from ttkthemes import ThemedTk
 from datetime import datetime
+from tkinter import simpledialog
 import psutil
 import platform
 import wmi
 import urllib.request
 import webbrowser
+from tkinter import messagebox
 import os
 import subprocess
 import sys
@@ -129,10 +132,428 @@ def run_hwinfo32():
 # run_hwinfo32()
 
 
+def run_speed_test():
+    print_to_terminal(
+        "THIS SECTION WILL RUN A CLI BASED SPEED TEST TO DETECT INTERNET STABILITY"
+    )
+
+    # Downloading the speedtest executable using PowerShell
+    try:
+        command = [
+            "powershell",
+            "Invoke-WebRequest",
+            "https://raw.githubusercontent.com/coff33ninja/AIO/main/TOOLS/1.INFORMATION/speedtest.exe",
+            "-O",
+            "c:\\NexTool\\speedtest.exe",
+        ]
+        result = subprocess.run(command, text=True, capture_output=True, check=True)
+        print_to_terminal(result.stdout)
+
+        # Running the speedtest and capturing its output
+        result = subprocess.run(
+            ["C:\\NexTool\\speedtest.exe"], text=True, capture_output=True, check=True
+        )
+        print_to_terminal(result.stdout)
+
+    except subprocess.CalledProcessError as e:
+        print_to_terminal(f"Error occurred during command execution:\n{e.stderr}")
+
+    except Exception as e:
+        print_to_terminal(f"Error occurred: {e}")
+
+
+def list_adapters():
+    print_to_terminal("Listing all network configurations registered on the device...")
+    try:
+        output = subprocess.check_output(["netsh", "interface", "ip", "show", "config"])
+        print_to_terminal(output.decode())
+    except Exception as e:
+        print_to_terminal(f"Failed to list adapters: {e}")
+
+
+def auto_config_wifi():
+    print_to_terminal("Configuring Wi-Fi for automatic IP and DNS...")
+    try:
+        # Set IP to DHCP
+        subprocess.run(
+            [
+                "netsh",
+                "interface",
+                "ipv4",
+                "set",
+                "address",
+                "name=Wi-Fi",
+                "source=dhcp",
+            ],
+            check=True,
+        )
+
+        # Set DNS to DHCP
+        subprocess.run(
+            [
+                "netsh",
+                "interface",
+                "ipv4",
+                "set",
+                "dnsservers",
+                "name=Wi-Fi",
+                "source=dhcp",
+            ],
+            check=True,
+        )
+
+        print_to_terminal("Wi-Fi configured successfully for automatic IP and DNS.")
+    except subprocess.CalledProcessError:
+        print_to_terminal(
+            "Failed to configure Wi-Fi. Ensure you have the necessary permissions and that Wi-Fi is a valid interface name."
+        )
+
+
+def auto_config_ethernet():
+    print_to_terminal("Configuring Ethernet for automatic settings...")
+
+    try:
+        # Set IP configuration for Ethernet to DHCP
+        subprocess.run(
+            [
+                "netsh",
+                "interface",
+                "ipv4",
+                "set",
+                "address",
+                "name=Ethernet",
+                "source=dhcp",
+            ]
+        )
+        # Set DNS for Ethernet to DHCP
+        subprocess.run(
+            [
+                "netsh",
+                "interface",
+                "ipv4",
+                "set",
+                "dnsservers",
+                "name=Ethernet",
+                "source=dhcp",
+            ]
+        )
+
+        print_to_terminal("Ethernet set up successfully.")
+        response = subprocess.run(
+            ["ping", "google.com"], capture_output=True, text=True
+        )
+        print_to_terminal(response.stdout)
+
+    except Exception as e:
+        print_to_terminal(f"Error occurred: {e}")
+
+
+def manual_config_wifi():
+    # Getting the details from the user
+    wifi_ip = simpledialog.askstring("Input", "Enter Wi-Fi IP Address:")
+    wifi_subnet = simpledialog.askstring("Input", "Enter Wi-Fi Subnet Mask:")
+    wifi_gateway = simpledialog.askstring("Input", "Enter Wi-Fi Gateway:")
+    wifi_dns = simpledialog.askstring("Input", "Enter Wi-Fi DNS:")
+
+    # Applying the configurations
+    print_to_terminal("Applying Wi-Fi configurations...")
+
+    try:
+        subprocess.run(
+            [
+                "netsh",
+                "interface",
+                "ipv4",
+                "set",
+                "address",
+                'name="Wi-Fi"',
+                f"static {wifi_ip} {wifi_subnet} {wifi_gateway}",
+            ]
+        )
+        subprocess.run(
+            [
+                "netsh",
+                "interface",
+                "ipv4",
+                "set",
+                "dns",
+                'name="Wi-Fi"',
+                f"{wifi_dns}",
+                "primary",
+            ]
+        )
+
+        print_to_terminal("Wi-Fi configurations applied successfully.")
+    except Exception as e:
+        print_to_terminal(f"Error occurred: {e}")
+
+
+def ping_host():
+    user_input = simpledialog.askstring(
+        "Input", "Enter an IP address or hostname to ping (e.g., 8.8.8.8 for GOOGLE):"
+    )
+
+    if user_input:  # Check if user provided input and didn't cancel the dialog
+        print_to_terminal(f"Pinging {user_input}...")
+
+        try:
+            response = subprocess.run(
+                ["ping", user_input], capture_output=True, text=True
+            )
+            print_to_terminal(response.stdout)
+            if response.returncode != 0:
+                print_to_terminal("Ping operation failed.")
+        except Exception as e:
+            print_to_terminal(f"Error occurred: {e}")
+    else:
+        print_to_terminal("Ping operation cancelled by user.")
+
+
+def traceroute():
+    print_to_terminal("Please enter the IP address or hostname to trace:")
+    host = simpledialog.askstring("Input", "Enter the IP address or hostname:")
+
+    if host:
+        print_to_terminal(f"Tracing route to {host}...\n")
+        try:
+            output = subprocess.check_output(
+                ["tracert", "-d", "-h", "64", host], text=True, stderr=subprocess.STDOUT
+            )
+            print_to_terminal(output)
+        except Exception as e:
+            print_to_terminal(f"Error occurred: {e}")
+    else:
+        print_to_terminal("No input provided. Operation cancelled.")
+
+
+def setup_network_share():
+    print_to_terminal("NETWORK SHARE MAP SETUP")
+    driveletter = simpledialog.askstring("Input", "Enter a letter to use for map:")
+    computer_name = simpledialog.askstring(
+        "Input", "Enter an IP address or hostname for map:"
+    )
+    share_name = simpledialog.askstring("Input", "Enter a folder share name for map:")
+    persistent_choice = simpledialog.askstring(
+        "Input", "Type ONLY YES or NO to make it permanent:"
+    )
+    username = simpledialog.askstring(
+        "Input", "Enter USER ACCOUNT SHARE NAME (Leave blank if none):"
+    )
+    password = simpledialog.askstring(
+        "Input", "Enter USER ACCOUNT PASSWORD (Leave blank if none):", show="*"
+    )
+
+    cmd_str = f"net use {driveletter}: \\\\{computer_name}\\{share_name} /user:{username} {password} /PERSISTENT:{persistent_choice}"
+
+    try:
+        subprocess.run(cmd_str, shell=True, check=True, capture_output=True, text=True)
+        print_to_terminal(
+            f"Successfully mapped drive {driveletter}: to {computer_name}\\{share_name}"
+        )
+    except subprocess.CalledProcessError as e:
+        print_to_terminal(f"Error occurred: {e.stdout}")
+
+
+def remove_network_map():
+    print_to_terminal("REMOVE NETWORK MAP")
+
+    # Prompt the user for a drive letter
+    drive_letter = input("ENTER MAPPED DRIVE LETTER TO REMOVE:")
+
+    try:
+        # Attempt to remove the network map
+        subprocess.run(["net", "use", f"{drive_letter}:", "/delete"], check=True)
+        print_to_terminal(f"{drive_letter}: drive mapping removed successfully.")
+    except subprocess.CalledProcessError:
+        print_to_terminal(f"Failed to remove {drive_letter}: drive mapping.")
+
+
+def wifi_configuration():
+    print_to_terminal(
+        "This section will display all registered WIFI networks on this device."
+    )
+
+    # Show registered Wi-Fi networks
+    try:
+        result = subprocess.check_output(["netsh", "wlan", "show", "profile"])
+        print_to_terminal(result.decode("utf-8"))
+
+        # Ask user if they want to view passwords of saved networks
+        answer = messagebox.askyesno(
+            "WiFi Passwords", "Do you want to view the WiFi passwords?"
+        )
+
+        if answer:
+            profiles = [
+                line.split(":")[1][1:-1]
+                for line in result.decode("utf-8").split("\n")
+                if "All User Profile" in line
+            ]
+            for profile in profiles:
+                try:
+                    wifi_result = subprocess.check_output(
+                        [
+                            "netsh",
+                            "wlan",
+                            "show",
+                            "profile",
+                            "name={}".format(profile),
+                            "key=clear",
+                        ]
+                    )
+                    wifi_lines = wifi_result.decode("utf-8").split("\n")
+                    wifi_lines = [
+                        line.split(":")[1][1:-1]
+                        for line in wifi_lines
+                        if "Key Content" in line
+                    ]
+                    print_to_terminal(f"SSID: {profile}  |  Password: {wifi_lines[0]}")
+                except subprocess.CalledProcessError as e:
+                    print_to_terminal(
+                        f"Encountered an error while fetching details of {profile}. {e}"
+                    )
+                    continue
+
+        print_to_terminal("Completed fetching WiFi details.")
+    except subprocess.CalledProcessError as e:
+        print_to_terminal(f"Error occurred: {e}")
+
+
+def disable_windows_defender():
+    print_to_terminal("DISABLING WINDOWS DEFENDER...")
+    try:
+        # Set Windows Defender's real-time monitoring to disabled
+        subprocess.run(
+            [
+                "Powershell",
+                "-ExecutionPolicy",
+                "Bypass",
+                "Set-MpPreference",
+                "-DisableRealtimeMonitoring",
+                "1",
+            ],
+            check=True,
+        )
+
+        # Downloading and executing the script to disable Windows Defender
+        defender_script_url = "https://raw.githubusercontent.com/coff33ninja/AIO/main/TOOLS/2.COMPUTER_CONFIGURATION/disable-windows-defender.ps1"
+        destination = os.path.join(
+            os.environ["USERPROFILE"],
+            "AppData",
+            "Local",
+            "Temp",
+            "AIO",
+            "disable-windows-defender.ps1",
+        )
+        urllib.request.urlretrieve(defender_script_url, destination)
+        subprocess.run(
+            ["Powershell", "-ExecutionPolicy", "Bypass", "-File", destination],
+            check=True,
+        )
+
+        # Other commands...
+
+        print_to_terminal("WINDOWS DEFENDER DISABLED SUCCESSFULLY.")
+    except Exception as e:
+        print_to_terminal(f"Error occurred: {e}")
+
+
+def remove_windows_defender():
+    print_to_terminal("REMOVING WINDOWS DEFENDER...")
+    try:
+        # Downloading install_wim_tweak.exe
+        tweak_url = "https://raw.githubusercontent.com/coff33ninja/AIO/main/TOOLS/2.COMPUTER_CONFIGURATION/install_wim_tweak.exe"
+        destination = os.path.join(
+            os.environ["USERPROFILE"],
+            "AppData",
+            "Local",
+            "Temp",
+            "AIO",
+            "install_wim_tweak.exe",
+        )
+        urllib.request.urlretrieve(tweak_url, destination)
+
+        # Run the downloaded executable
+        subprocess.run([destination, "/o", "/l", "SHOWCLI"], check=True)
+        subprocess.run(
+            [destination, "/o", "/c", "Windows-Defender", "/r", "SHOWCLI"], check=True
+        )
+
+        # Other commands...
+
+        print_to_terminal("WINDOWS DEFENDER REMOVED SUCCESSFULLY.")
+    except Exception as e:
+        print_to_terminal(f"Error occurred: {e}")
+
+# Placeholder function for the additional tool
+def additional_tool():
+    print_to_terminal("RUNNING ADDITIONAL TOOL...")
+    # Add the commands or functionalities for the additional tool here
+    print_to_terminal("ADDITIONAL TOOL COMPLETED.")
+
+def run_TELEMETRY():
+    print_to_terminal("Blocking telemetry...")
+    try:
+        # Set the registry key
+        command = ["reg", "add", "HKLM\SOFTWARE\Policies\Microsoft\Windows\DataCollection", "/v", "AllowTelemetry", "/t", "REG_DWORD", "/d", "0", "/F"]
+        subprocess.run(command, check=True)
+
+        # Download and run the PowerShell telemetry blocker
+        telemetry_script_url = "https://raw.githubusercontent.com/coff33ninja/AIO/main/TOOLS/2.COMPUTER_CONFIGURATION/block-telemetry.ps1"
+        telemetry_script_path = os.path.join(temp_path, "block-telemetry.ps1")
+        download_file(telemetry_script_url, telemetry_script_path)
+        command = ["powershell", "-ExecutionPolicy", "Bypass", "-File", telemetry_script_path, "-verb", "runas"]
+        subprocess.run(command, check=True)
+
+        # Download and run ooshutup10 with its configuration
+        exe_url = "https://raw.githubusercontent.com/coff33ninja/AIO/main/TOOLS/2.COMPUTER_CONFIGURATION/ooshutup10.exe"
+        cfg_url = "https://raw.githubusercontent.com/coff33ninja/AIO/main/TOOLS/2.COMPUTER_CONFIGURATION/ooshutup10.cfg"
+        exe_path = os.path.join(temp_path, "ooshutup10.exe")
+        cfg_path = os.path.join(temp_path, "ooshutup10.cfg")
+        download_file(exe_url, exe_path)
+        download_file(cfg_url, cfg_path)
+        command = [exe_path, cfg_path, "/quiet"]
+        subprocess.run(command, check=True)
+
+        # Show success message box
+        messagebox.showinfo('COMPLETE', 'Telemetry blocked successfully. Press OK to continue.')
+
+    except subprocess.CalledProcessError as e:
+        print_to_terminal(f"Error occurred during command execution:\n{e.stderr}")
+    except Exception as e:
+        print_to_terminal(f"Error occurred: {e}")
+
+def run_MAS():
+    print_to_terminal("Executing Microsoft Activation Script...")
+    try:
+        # Execute the PowerShell command
+        command = ["powershell.exe", "-Command", "irm https://massgrave.dev/get | iex"]
+        result = subprocess.run(command, text=True, capture_output=True, check=True)
+        print_to_terminal(result.stdout)
+    except subprocess.CalledProcessError as e:
+        print_to_terminal(f"Error occurred during command execution:\n{e.stderr}")
+    except Exception as e:
+        print_to_terminal(f"Error occurred: {e}")
+
 def button_action(sub_item):
     function_mapping = {
         "Basic Computer Report": run_quick_info,
         "Advanced Hardware Info": run_hwinfo32,
+        "Test Connection": run_speed_test,
+        "List Adapters": list_adapters,
+        "Auto Config Wi-Fi": auto_config_wifi,
+        "Ethernet Automatic Configuration": auto_config_ethernet,
+        "Manual Wi-Fi Configuration": manual_config_wifi,
+        "Ping Host": ping_host,
+        "Trace Route": traceroute,
+        "Setup Network Share": setup_network_share,
+        "Remove Network Map": remove_network_map,
+        "Wi-Fi Configuration": wifi_configuration,
+        "Disable Windows Defender": disable_windows_defender,
+        "Remove Windows Defender": remove_windows_defender,
+        "Additional Tool": additional_tool,
+        "Block Telemetry": run_TELEMETRY
+        "Microsoft Activation Script": run_MAS,
     }
     function_to_run = function_mapping.get(sub_item)
     if function_to_run:
@@ -297,10 +718,21 @@ info_label.pack(fill="both", expand=True, padx=10, pady=10)
 tabs = {
     "System": ["Basic Computer Report", "Advanced Hardware Info"],
     "Configuration": [
-        "Network Setup",
-        "Defender Toolbox",
-        "Telemetry",
-        "Microsoft Activation",
+        "Test Connection",
+        "List Adapters",
+        "Auto Config Wi-Fi",
+        "Ethernet Automatic Configuration",
+        "Manual Wi-Fi Configuration",
+        "Ping Host",
+        "Trace Route",
+        "Setup Network Share",
+        "Remove Network Map",
+        "Wi-Fi Configuration",
+        "Disable Windows Defender",
+        "Remove Windows Defender",
+        "Additional Tool",
+        "Block Telemetry",
+        "Microsoft Activation Script",
     ],
     "Software Management": [
         "Windows Update",
