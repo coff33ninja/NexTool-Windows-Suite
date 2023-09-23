@@ -35,6 +35,16 @@ def print_to_terminal(msg):
     terminal.see(tk.END)  # Auto-scroll to the end
 
 
+def download_file(url, destination):
+    """
+    Downloads a file from the provided URL to the given destination path.
+    """
+    try:
+        urllib.request.urlretrieve(url, destination, reporthook=download_progress)
+    except Exception as e:
+        print_to_terminal(f"Error downloading {url} to {destination}: {e}")
+
+
 def download_progress(blocknum, blocksize, totalsize):
     """Callback for displaying download progress."""
     downloaded = blocknum * blocksize
@@ -137,27 +147,22 @@ def run_speed_test():
         "THIS SECTION WILL RUN A CLI BASED SPEED TEST TO DETECT INTERNET STABILITY"
     )
 
-    # Downloading the speedtest executable using PowerShell
-    try:
-        command = [
-            "powershell",
-            "Invoke-WebRequest",
-            "https://raw.githubusercontent.com/coff33ninja/AIO/main/TOOLS/1.INFORMATION/speedtest.exe",
-            "-O",
-            "c:\\NexTool\\speedtest.exe",
-        ]
-        result = subprocess.run(command, text=True, capture_output=True, check=True)
-        print_to_terminal(result.stdout)
+    # Setting the paths
+    url = "https://raw.githubusercontent.com/coff33ninja/AIO/main/TOOLS/1.INFORMATION/speedtest.exe"
+    destination = "c:\\NexTool\\speedtest.exe"
 
-        # Running the speedtest and capturing its output
+    # Downloading the speedtest executable using the download_file() method
+    download_file(url, destination)
+
+    # Running the speedtest and capturing its output
+    try:
         result = subprocess.run(
-            ["C:\\NexTool\\speedtest.exe"], text=True, capture_output=True, check=True
+            [destination], text=True, capture_output=True, check=True
         )
         print_to_terminal(result.stdout)
 
     except subprocess.CalledProcessError as e:
         print_to_terminal(f"Error occurred during command execution:\n{e.stderr}")
-
     except Exception as e:
         print_to_terminal(f"Error occurred: {e}")
 
@@ -437,15 +442,11 @@ def disable_windows_defender():
 
         # Downloading and executing the script to disable Windows Defender
         defender_script_url = "https://raw.githubusercontent.com/coff33ninja/AIO/main/TOOLS/2.COMPUTER_CONFIGURATION/disable-windows-defender.ps1"
-        destination = os.path.join(
-            os.environ["USERPROFILE"],
-            "AppData",
-            "Local",
-            "Temp",
-            "AIO",
-            "disable-windows-defender.ps1",
-        )
-        urllib.request.urlretrieve(defender_script_url, destination)
+        destination = "C:\\NexTool\\disable-windows-defender.ps1"
+
+        # Use the download_file method to download the PowerShell script
+        download_file(defender_script_url, destination)
+
         subprocess.run(
             ["Powershell", "-ExecutionPolicy", "Bypass", "-File", destination],
             check=True,
@@ -463,15 +464,10 @@ def remove_windows_defender():
     try:
         # Downloading install_wim_tweak.exe
         tweak_url = "https://raw.githubusercontent.com/coff33ninja/AIO/main/TOOLS/2.COMPUTER_CONFIGURATION/install_wim_tweak.exe"
-        destination = os.path.join(
-            os.environ["USERPROFILE"],
-            "AppData",
-            "Local",
-            "Temp",
-            "AIO",
-            "install_wim_tweak.exe",
-        )
-        urllib.request.urlretrieve(tweak_url, destination)
+        destination = "C:\\NexTool\\install_wim_tweak.exe"
+
+        # Use the download_file method to download the executable
+        download_file(tweak_url, destination)
 
         # Run the downloaded executable
         subprocess.run([destination, "/o", "/l", "SHOWCLI"], check=True)
@@ -485,43 +481,67 @@ def remove_windows_defender():
     except Exception as e:
         print_to_terminal(f"Error occurred: {e}")
 
+
 # Placeholder function for the additional tool
 def additional_tool():
     print_to_terminal("RUNNING ADDITIONAL TOOL...")
     # Add the commands or functionalities for the additional tool here
     print_to_terminal("ADDITIONAL TOOL COMPLETED.")
 
+
 def run_TELEMETRY():
     print_to_terminal("Blocking telemetry...")
     try:
         # Set the registry key
-        command = ["reg", "add", "HKLM\SOFTWARE\Policies\Microsoft\Windows\DataCollection", "/v", "AllowTelemetry", "/t", "REG_DWORD", "/d", "0", "/F"]
+        command = [
+            "reg",
+            "add",
+            "HKLM\SOFTWARE\Policies\Microsoft\Windows\DataCollection",
+            "/v",
+            "AllowTelemetry",
+            "/t",
+            "REG_DWORD",
+            "/d",
+            "0",
+            "/F",
+        ]
         subprocess.run(command, check=True)
 
         # Download and run the PowerShell telemetry blocker
         telemetry_script_url = "https://raw.githubusercontent.com/coff33ninja/AIO/main/TOOLS/2.COMPUTER_CONFIGURATION/block-telemetry.ps1"
-        telemetry_script_path = os.path.join(temp_path, "block-telemetry.ps1")
+        telemetry_script_path = "C:\\NexTool\\block-telemetry.ps1"
         download_file(telemetry_script_url, telemetry_script_path)
-        command = ["powershell", "-ExecutionPolicy", "Bypass", "-File", telemetry_script_path, "-verb", "runas"]
+        command = [
+            "powershell",
+            "-ExecutionPolicy",
+            "Bypass",
+            "-File",
+            telemetry_script_path,
+            "-verb",
+            "runas",
+        ]
         subprocess.run(command, check=True)
 
         # Download and run ooshutup10 with its configuration
         exe_url = "https://raw.githubusercontent.com/coff33ninja/AIO/main/TOOLS/2.COMPUTER_CONFIGURATION/ooshutup10.exe"
         cfg_url = "https://raw.githubusercontent.com/coff33ninja/AIO/main/TOOLS/2.COMPUTER_CONFIGURATION/ooshutup10.cfg"
-        exe_path = os.path.join(temp_path, "ooshutup10.exe")
-        cfg_path = os.path.join(temp_path, "ooshutup10.cfg")
+        exe_path = "C:\\NexTool\\ooshutup10.exe"
+        cfg_path = "C:\\NexTool\\ooshutup10.cfg"
         download_file(exe_url, exe_path)
         download_file(cfg_url, cfg_path)
         command = [exe_path, cfg_path, "/quiet"]
         subprocess.run(command, check=True)
 
         # Show success message box
-        messagebox.showinfo('COMPLETE', 'Telemetry blocked successfully. Press OK to continue.')
+        messagebox.showinfo(
+            "COMPLETE", "Telemetry blocked successfully. Press OK to continue."
+        )
 
     except subprocess.CalledProcessError as e:
         print_to_terminal(f"Error occurred during command execution:\n{e.stderr}")
     except Exception as e:
         print_to_terminal(f"Error occurred: {e}")
+
 
 def run_MAS():
     print_to_terminal("Executing Microsoft Activation Script...")
@@ -534,6 +554,7 @@ def run_MAS():
         print_to_terminal(f"Error occurred during command execution:\n{e.stderr}")
     except Exception as e:
         print_to_terminal(f"Error occurred: {e}")
+
 
 def button_action(sub_item):
     function_mapping = {
@@ -552,7 +573,7 @@ def button_action(sub_item):
         "Disable Windows Defender": disable_windows_defender,
         "Remove Windows Defender": remove_windows_defender,
         "Additional Tool": additional_tool,
-        "Block Telemetry": run_TELEMETRY
+        "Block Telemetry": run_TELEMETRY,
         "Microsoft Activation Script": run_MAS,
     }
     function_to_run = function_mapping.get(sub_item)

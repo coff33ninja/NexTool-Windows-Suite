@@ -150,38 +150,6 @@ pause & goto end_COMPUTER_CONFIGURATION
 
 ::========================================================================================================================================
 
-:DEFENDER_TOOLBOX
-color 0f
-mode con cols=98 lines=32
-title  WINDOWS DEFENDER TOOLBOX
-cls
-
-echo:
-echo:
-echo                                      WINDOWS DEFENDER TOOLBOX
-echo                  ^|===============================================================^|
-echo                  ^|                                                               ^|
-echo                  ^|                                                               ^|
-echo                  ^|      [1] WINDOWS DEFENDER TOOLBOX                             ^|
-echo                  ^|                                                               ^|
-echo                  ^|      [2] REMOVE WINDOWS DEFENDER (NOT ADVISED)                ^|
-echo                  ^|                                                               ^|
-echo                  ^|      ___________________________________________________      ^|
-echo                  ^|                                                               ^|
-echo                  ^|                          [3] GO BACK            [4] EXIT      ^|
-echo                  ^|                                                               ^|
-echo                  ^|===============================================================^|
-echo:
-choice /C:1234 /N /M ">                   Enter Your Choice in the Keyboard [1,2,3,4] : "
-
-if errorlevel  4 goto:EXIT
-if errorlevel  3 goto:end_COMPUTER_CONFIGURATION
-if errorlevel  2 goto:REMOVE_WINDOWS_DEFENDER
-if errorlevel  1 goto:DISABLE_WINDOWS_DEFENDER
-cls
-
-
-
 
 ::========================================================================================================================================
 
