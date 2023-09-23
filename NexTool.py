@@ -427,37 +427,46 @@ def wifi_configuration():
 def disable_windows_defender():
     print_to_terminal("DISABLING WINDOWS DEFENDER...")
     try:
-        # Set Windows Defender's real-time monitoring to disabled
-        subprocess.run(
-            [
-                "Powershell",
-                "-ExecutionPolicy",
-                "Bypass",
-                "Set-MpPreference",
-                "-DisableRealtimeMonitoring",
-                "1",
-            ],
-            check=True,
-        )
+        # Disable real-time monitoring
+        subprocess.run(["Powershell", "-ExecutionPolicy", "Bypass", "Set-MpPreference", "-DisableRealtimeMonitoring", "1"], check=True)
 
-        # Downloading and executing the script to disable Windows Defender
-        defender_script_url = "https://raw.githubusercontent.com/coff33ninja/AIO/main/TOOLS/2.COMPUTER_CONFIGURATION/disable-windows-defender.ps1"
-        destination = "C:\\NexTool\\disable-windows-defender.ps1"
+        # Download the PowerShell script and run it
+        ps_script_url = "https://raw.githubusercontent.com/coff33ninja/AIO/main/TOOLS/2.COMPUTER_CONFIGURATION/disable-windows-defender.ps1"
+        destination = "C:\\NexTool\\WINDOWS_DEFENDER\\disable-windows-defender.ps1"
+        subprocess.run(["aria2c", ps_script_url, "-d,", "--dir=C:\\NexTool\\WINDOWS_DEFENDER\\", "--allow-overwrite=true", "--disable-ipv6"], check=True)
+        subprocess.run(["Powershell", "-ExecutionPolicy", "Bypass", "-File", destination, "-verb", "runas"], check=True)
 
-        # Use the download_file method to download the PowerShell script
-        download_file(defender_script_url, destination)
+        # Add Threat ID exceptions
+        threat_ids = [
+            "2147685180", "2147735507", "2147736914", "2147743522", "2147734094", "2147743421", "2147765679", "251873",
+            "213927", "2147722906"
+        ]
+        for tid in threat_ids:
+            subprocess.run(["Powershell", "-nologo", "-noninteractive", "-windowStyle", "hidden", "-noprofile", "-command",
+                            "Add-MpPreference", "-ThreatIDDefaultAction_Ids", tid, "-ThreatIDDefaultAction_Actions", "Allow", "-Force"], check=True)
 
-        subprocess.run(
-            ["Powershell", "-ExecutionPolicy", "Bypass", "-File", destination],
-            check=True,
-        )
+        # Add path exclusions
+        paths = [
+            "C:\\Windows\\KMSAutoS", "C:\\Windows\\System32\\SppExtComObjHook.dll", "C:\\Windows\\System32\\SppExtComObjPatcher.exe",
+            "C:\\Windows\\AAct_Tools", "C:\\Windows\\AAct_Tools\\AAct_x64.exe", "C:\\Windows\\AAct_Tools\\AAct_files\\KMSSS.exe",
+            "C:\\Windows\\AAct_Tools\\AAct_files", "C:\\Windows\\KMS", "C:\\WINDOWS\\Temp\\_MAS", "C:\\ProgramData\\Online_KMS_Activation",
+            "C:\\ProgramData\\Online_KMS_Activation\\BIN\\cleanosppx64.exe", "C:\\ProgramData\\Online_KMS_Activation\\BIN\\cleanosppx86.exe",
+            "C:\\ProgramData\\Online_KMS_Activation\\Activate.cmd", "C:\\ProgramData\\Online_KMS_Activation\\Info.txt",
+            "C:\\ProgramData\\Online_KMS_Activation\\Activate.cmd"
+        ]
+        for path in paths:
+            subprocess.run(["Powershell", "-nologo", "-noninteractive", "-windowStyle", "hidden", "-noprofile", "-command",
+                            "Add-MpPreference", "-ExclusionPath", path, "-Force"], check=True)
 
-        # Other commands...
+        # Download and run Defender_Tools.exe
+        defender_tools_url = "https://raw.githubusercontent.com/coff33ninja/AIO/main/TOOLS/2.COMPUTER_CONFIGURATION/Defender_Tools.exe"
+        destination = "C:\\NexTool\\WINDOWS_DEFENDER\\Defender_Tools.exe"
+        subprocess.run(["aria2c", defender_tools_url, "-d,", "--dir=C:\\NexTool\\WINDOWS_DEFENDER\\", "--allow-overwrite=true", "--disable-ipv6"], check=True)
+        subprocess.run([destination], check=True)
 
         print_to_terminal("WINDOWS DEFENDER DISABLED SUCCESSFULLY.")
     except Exception as e:
         print_to_terminal(f"Error occurred: {e}")
-
 
 def remove_windows_defender():
     print_to_terminal("REMOVING WINDOWS DEFENDER...")
