@@ -51,6 +51,7 @@ Scan for potential vulnerabilities and get suggestions for security enhancements
 # - [ ] Add a GUI to the application
 # - [ ] Add a "Windows Configuration" section
 # - [ ] Add a "Services Manager" section
+# - [ ] Winget and Choco as package manager with the ability to install and update applications with or without a guided or pre-selective approach 
 # - [ ] And possibly more...
 
 # Closing Remarks
