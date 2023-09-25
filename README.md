@@ -1,115 +1,91 @@
-## NexTool Windows Suite 🛠️
+# NexTool Windows Suite 🛠️
 
-A comprehensive all-in-one toolkit designed for Windows enthusiasts, IT professionals, and casual users to optimize, configure, and maintain the Windows environment seamlessly.
-Features
-🖥️ System Information
+## Introduction
 
-Comprehensive details about your machine's specifications and performance metrics, such as:
+NexTool Windows Suite offers an all-in-one solution for Windows users, ranging from enthusiasts to IT professionals. It's designed to simplify and optimize the Windows environment, making complex tasks straightforward.
 
-    * CPU Specifications
-    * Memory Statistics
-    * BIOS Version
-    * Windows Build and Version
-    * Connected Disks
+## Features
 
-🔧 Windows Configuration
+### 🖥️ System Information
 
-    * Basic Computer Report: Generate an overview of your computer's system details.
-    * Advanced Hardware Info: An in-depth analysis of your device's hardware and system resources using third-party applications like HWINFO32.
-    * Defender Management: Control and configure Windows Defender settings.
-    * Telemetry: Control telemetry and data collection settings for Windows.
-    * Software & Windows Updates Manager: Manage and apply Windows updates, pause automatic updates, and keep your software updated.
-    * Driver Updater: Keep your drivers updated.
-    * Office Installations: Streamline the process of installing and managing Microsoft Office applications.
-    * Network Setup: Configure network settings and connections.
-    * Telemetry: Control telemetry and data collection settings for Windows.
+Gain detailed insights about your machine's specs and performance:
+- CPU Specifications
+- Memory Statistics
+- BIOS Version
+- Windows Build and Version
+- Connected Disks
 
-🚀 Services Manager
+### 🔧 Windows Configuration
 
-Disable or maintain services running on Windows for optimal performance. Including:
+Personalize and control various facets of Windows:
+- Basic Computer Report: Overview of system details.
+- Advanced Hardware Info: Deep dive into hardware and system resources.
+- Defender Management: Fine-tune Windows Defender settings.
+- Telemetry: Control the extent of Windows data collection.
+- Software & Windows Updates Manager: Seamless updates management.
+- Driver Updater: Ensure your drivers are always up to date.
+- Office Installations: Effortless installation and management of Microsoft Office.
+- Network Setup: Personalize network settings and connections.
 
-    * DISM and SFC Windows Repair: Repair corrupted Windows system files.
-    * Windows Debloater: Remove unnecessary pre-installed Windows software.
-    * Group Policy Reset: Reset all group policies to default settings.
-    * WMI Reset: Reset the Windows Management Instrumentation service.
+### 🚀 Services Manager
 
-# Additional Features:
+Achieve optimal performance by managing Windows services:
+- DISM and SFC Windows Repair: Mend corrupted Windows files.
+- Windows Debloater: Eliminate bloatware.
+- Group Policy Reset: Restore group policies to defaults.
+- WMI Reset: Reinitialize the Windows Management Instrumentation service.
 
-🌐 Network Optimizer
-Analyze and enhance your network settings for a better online experience.
+### Additional Features
+- 🌐 Network Optimizer: Fine-tune your network settings.
+- 💽 Disk Cleaner: Maintain and optimize storage drives.
+- 🚫 Firewall Manager: Enhance your firewall settings.
+- 🔒 Security Audit Tool: Detect vulnerabilities and get security recommendations.
 
-💽 Disk Cleaner
-Optimize and defragment storage drives, clean unnecessary files, and check for disk errors.
-
-🚫 Firewall Manager
-Customize and monitor your firewall settings for improved security.
-
-🔒 Security Audit Tool
-Scan for potential vulnerabilities and get suggestions for security enhancements.
-
+## Setup Instructions
 # TODO:
 
- Add a GUI to the application: Develop an intuitive and user-friendly graphical interface using Python to enhance the user experience.
+## TODO & Progress
 
- Add a "Windows Configuration" section: Incorporate tools to manage and modify Windows settings. This should include:
+Here's our roadmap for NexTool's development and the milestones achieved:
 
-    Defender Management: Configure Windows Defender settings to balance between performance and security.
-    Updates Management: Provide options to easily apply, roll back or configure Windows updates.
-    Telemetry and Data Collection Settings: Allow users to control the extent of data Windows collects.
+### Completed:
+- [x] Windows Configuration Section: Integrated tools for managing and modifying Windows settings.
+- [x] GUI Development: Building an intuitive and user-friendly interface using Python.
+- [x] Office Installations Manager: Implemented streamlined processes for managing Microsoft Office applications.
+- [x] Driver & Windows Updates Manager: Integrated tools for driver updates and Windows update management.
+- [x] Winget and Choco Integration: Implementing these package managers for easier software management.
+- [x] Network Optimizer: Analyze current network settings, also offer tweaks to optimize online connectivity and reduce latency.
 
- Add a "Services Manager" section: Introduce tools to:
+### In Progress / Planned:
+- [ ] Services Manager Section: Introduced tools for managing services for improved performance.
+- [ ] Winget and Choco Integration: Provide a guided mode for beginners and a selective mode for advanced users to choose their preferred applications for installation or updates.
+- [ ] Device Configuration: Adding functionalities for device settings customization.
+- [ ] Windows Debloating Tool: Tools to remove unnecessary pre-installed applications.
+- [ ] Network Optimizer: Tools for analyzing and enhancing network settings.
+- [ ] Telemetry and Data Collection Settings: Allow users to control the extent of data Windows collects.
+- [ ] Add a "Services Manager" section: Introduce tools to:
+         Disable unnecessary services to improve system performance.
+         Customize startup services to ensure a faster boot time.
+         Manage service dependencies for a stable system operation.
+- [ ] Windows Installation for Advanced Users: Offer features to facilitate custom Windows installations.
+- [ ] Disk Cleaner:  Scan for junk files, temporary files, and cache. Provide options to clean and reclaim storage space.
+- [ ] Firewall Manager: Customize firewall rules. Monitor incoming and outgoing connections for improved security.
+- [ ] Security Audit Tool: Scan the system for potential vulnerabilities. Provide recommendations and fixes for identified security loopholes.
 
-    Disable unnecessary services to improve system performance.
-    Customize startup services to ensure a faster boot time.
-    Manage service dependencies for a stable system operation.
 
- Winget and Choco as package managers: Implement these package managers to:
+And possibly more...: Continue to seek user feedback, identify common pain points, and integrate more tools and functionalities to make the NexTool Windows Suite the go-to toolbox for every Windows user.
 
-    Install new applications with ease.
-    Update existing applications without navigating through various websites.
-    Provide a guided mode for beginners and a selective mode for advanced users to choose their preferred applications for installation or updates.
+## Feedback & Issues
 
- Office Installations Manager: Streamline the process of installing and managing various Microsoft Office applications, including different versions and specific tools within the suite.
+Your feedback fuels NexTool! If you stumble upon a bug or have suggestions, kindly open an issue on our GitHub page.
 
- Driver & Windows Updates Manager: Introduce tools to:
+## Upcoming Enhancements
 
-    Scan for outdated drivers and provide update options.
-    Control Windows update behavior, including scheduling and pausing features.
+Stay informed about what's next for NexTool! Check out our GitHub Milestones and Projects for a peek into our roadmap.
 
- Device Configuration: Add functionalities to tweak and customize device settings, including mouse, display, sound, and power options.
+## Contribute
 
- Windows Debloating Tool: Incorporate tools to:
-
-    Identify and remove bloatware and unnecessary pre-installed applications.
-    Provide custom scripts or options for advanced users to selectively debloat their system.
-
- Windows Installation for Advanced Users: Offer features to facilitate custom Windows installations. This might include:
-
-    Options to slipstream updates.
-    Integrate third-party drivers during installation.
-    Configure advanced installation settings like partitions and boot options.
-
- Network Optimizer: Develop tools to:
-
-    Analyze current network settings.
-    Offer tweaks to optimize online connectivity and reduce latency.
-
- Disk Cleaner: Introduce features to:
-
-    Scan for junk files, temporary files, and cache.
-    Provide options to clean and reclaim storage space.
-
- Firewall Manager: Incorporate tools to:
-
-    Customize firewall rules.
-    Monitor incoming and outgoing connections for improved security.
-
- Security Audit Tool: Offer functionalities to:
-
-    Scan the system for potential vulnerabilities.
-    Provide recommendations and fixes for identified security loopholes.
-
- And possibly more...: Continue to seek user feedback, identify common pain points, and integrate more tools and functionalities to make the NexTool Windows Suite the go-to toolbox for every Windows user.
+Passionate about NexTool? We welcome contributions. For guidelines, please review our `CONTRIBUTING.md`.
 
 # Closing Remarks
 
