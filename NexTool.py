@@ -18,7 +18,7 @@ import win32con
 import win32com.client
 import zipfile
 
-app = ThemedTk(theme="arc")
+app = ThemedTk(theme="breeze-dark")
 app.title("NexTool Windows Suite")
 app.geometry("1000x700")
 
@@ -52,21 +52,40 @@ def verify_path(basedir, path):
 
 def download_file(url, destination):
     """
-    Downloads a file from the provided URL to the given destination path.
+    Downloads a file from the provided URL to the given destination path and updates a progress bar.
     """
     try:
+
+        def download_progress(blocknum, blocksize, totalsize):
+            downloaded = blocknum * blocksize
+            progress = int((downloaded / totalsize) * 100)
+            progress_bar["value"] = progress
+            app.update_idletasks()
+            print_to_terminal(f"Downloading: {progress}% complete")
+
         urllib.request.urlretrieve(url, destination, reporthook=download_progress)
     except Exception as e:
         print_to_terminal(f"Error downloading {url} to {destination}: {e}")
 
 
-def download_progress(blocknum, blocksize, totalsize):
-    """Callback for displaying download progress."""
-    downloaded = blocknum * blocksize
-    progress_percentage = int(downloaded / totalsize * 100)
-    print_to_terminal(
-        f"Downloaded {downloaded} of {totalsize} bytes ({progress_percentage}%)"
-    )
+def extract_zip(zip_path, destination_folder):
+    """
+    Extract a zip file to a specified folder and update the progress bar.
+    """
+
+    def extract_progress(zip_file):
+        files = zip_file.namelist()
+        total_files = len(files)
+
+        for i, file in enumerate(files, 1):
+            zip_file.extract(file, destination_folder)
+            percent_complete = int(i * 100 / total_files)
+            progress_bar["value"] = percent_complete
+            app.update_idletasks()
+            print_to_terminal(f"Extracting: {percent_complete}%")
+
+    with zipfile.ZipFile(zip_path, "r") as zip_ref:
+        extract_progress(zip_ref)
 
 
 def run_quick_info():
@@ -74,15 +93,15 @@ def run_quick_info():
     print_to_terminal("Running Basic Computer Report...")
 
     # Define the base directory and ensure it exists
+    print_to_terminal("Running Basic Computer Report...")
     base_dir = "C:\\NexTool\\System\\Basic Computer Report"
     if not os.path.exists(base_dir):
         os.makedirs(base_dir)
-
-    # Downloading the PowerShell script
-    ps_script_url = "https://raw.githubusercontent.com/coff33ninja/AIO/main/TOOLS/1.INFORMATION/ComputerInfo.ps1"
     destination = os.path.join(base_dir, "ComputerInfo.ps1")
-
-    urllib.request.urlretrieve(ps_script_url, destination, reporthook=download_progress)
+    download_file(
+        "https://raw.githubusercontent.com/coff33ninja/AIO/main/TOOLS/1.INFORMATION/ComputerInfo.ps1",
+        destination,
+    )
 
     # Execute the PowerShell script
     subprocess.run(
@@ -124,37 +143,25 @@ def run_hwinfo32():
         if not user_response:  # If the user says 'no', then return
             return
 
-    # Define the base directory and ensure it exists
+    # Downloading the executable and its configuration
     base_dir = "C:\\NexTool\\System\\Advanced Hardware Info"
     if not os.path.exists(base_dir):
         os.makedirs(base_dir)
-
-    # Downloading the executable and its configuration
-    exe_url = "https://raw.githubusercontent.com/coff33ninja/AIO/main/TOOLS/1.INFORMATION/HWiNFO32.exe"
-    ini_url = "https://raw.githubusercontent.com/coff33ninja/AIO/main/TOOLS/1.INFORMATION/HWiNFO32.INI"
-
     exe_destination = os.path.join(base_dir, "HWiNFO32.exe")
     ini_destination = os.path.join(base_dir, "HWiNFO32.INI")
-
-    urllib.request.urlretrieve(exe_url, exe_destination, reporthook=download_progress)
-    urllib.request.urlretrieve(ini_url, ini_destination, reporthook=download_progress)
-
-    # Run the downloaded executable
+    download_file(
+        "https://raw.githubusercontent.com/coff33ninja/AIO/main/TOOLS/1.INFORMATION/HWiNFO32.exe",
+        exe_destination,
+    )
+    download_file(
+        "https://raw.githubusercontent.com/coff33ninja/AIO/main/TOOLS/1.INFORMATION/HWiNFO32.INI",
+        ini_destination,
+    )
     subprocess.run([exe_destination], check=True)
 
     # Show the messagebox to notify user
     messagebox.showinfo("Notice", "Press OK to continue.")
-
-    # Clean up after executing
-    os.remove(exe_destination)
-    os.remove(ini_destination)
-
     return
-
-
-# Call the functions based on your requirements
-# run_quick_info()
-# run_hwinfo32()
 
 
 def run_speed_test():
@@ -162,22 +169,28 @@ def run_speed_test():
         "THIS SECTION WILL RUN A CLI BASED SPEED TEST TO DETECT INTERNET STABILITY"
     )
 
-    # Setting the paths
-    url = "https://raw.githubusercontent.com/coff33ninja/AIO/main/TOOLS/1.INFORMATION/speedtest.exe"
-    destination = "c:\\NexTool\\speedtest.exe"
+    # Define the base directory and ensure it exists
+    base_dir = "C:\\NexTool\\Configuration\\Network"
+    if not os.path.exists(base_dir):
+        os.makedirs(base_dir)
 
-    # Downloading the speedtest executable using the download_file() method
-    download_file(url, destination)
+    exe_destination = os.path.join(base_dir, "speedtest.exe")
+    download_file(
+        "https://raw.githubusercontent.com/coff33ninja/AIO/main/TOOLS/1.INFORMATION/speedtest.exe",
+        exe_destination,
+    )
 
-    # Running the speedtest and capturing its output
     try:
-        result = subprocess.run(
-            [destination], text=True, capture_output=True, check=True
-        )
-        print_to_terminal(result.stdout)
-
-    except subprocess.CalledProcessError as e:
-        print_to_terminal(f"Error occurred during command execution:\n{e.stderr}")
+        with subprocess.Popen(
+            [exe_destination],
+            stdout=subprocess.PIPE,
+            text=True,
+            bufsize=1,
+            universal_newlines=True,
+        ) as proc:
+            for line in proc.stdout:
+                print_to_terminal(line.strip())
+        proc.wait()
     except Exception as e:
         print_to_terminal(f"Error occurred: {e}")
 
@@ -440,135 +453,85 @@ def wifi_configuration():
 
 
 def disable_windows_defender():
+    os.system("cls")
     print_to_terminal("DISABLING WINDOWS DEFENDER...")
+
     try:
         # Disable real-time monitoring
-        subprocess.run(
-            [
-                "Powershell",
-                "-ExecutionPolicy",
-                "Bypass",
-                "Set-MpPreference",
-                "-DisableRealtimeMonitoring",
-                "1",
-            ],
-            check=True,
-        )
-
-        # Download the PowerShell script and run it
-        ps_script_url = "https://raw.githubusercontent.com/coff33ninja/AIO/main/TOOLS/2.COMPUTER_CONFIGURATION/disable-windows-defender.ps1"
-        destination = "C:\\NexTool\\WINDOWS_DEFENDER\\disable-windows-defender.ps1"
-        subprocess.run(
-            [
-                "aria2c",
-                ps_script_url,
-                "-d,",
-                "--dir=C:\\NexTool\\WINDOWS_DEFENDER\\",
-                "--allow-overwrite=true",
-                "--disable-ipv6",
-            ],
-            check=True,
-        )
-        subprocess.run(
-            [
-                "Powershell",
-                "-ExecutionPolicy",
-                "Bypass",
-                "-File",
-                destination,
-                "-verb",
-                "runas",
-            ],
-            check=True,
-        )
-
-        # Add Threat ID exceptions
-        threat_ids = [
-            "2147685180",
-            "2147735507",
-            "2147736914",
-            "2147743522",
-            "2147734094",
-            "2147743421",
-            "2147765679",
-            "251873",
-            "213927",
-            "2147722906",
+        cmd_list = [
+            "Powershell",
+            "-ExecutionPolicy",
+            "Bypass",
+            "Set-MpPreference",
+            "-DisableRealtimeMonitoring",
+            "$true",
         ]
-        for tid in threat_ids:
-            subprocess.run(
-                [
-                    "Powershell",
-                    "-nologo",
-                    "-noninteractive",
-                    "-windowStyle",
-                    "hidden",
-                    "-noprofile",
-                    "-command",
-                    "Add-MpPreference",
-                    "-ThreatIDDefaultAction_Ids",
-                    tid,
-                    "-ThreatIDDefaultAction_Actions",
-                    "Allow",
-                    "-Force",
-                ],
-                check=True,
-            )
+        with subprocess.Popen(cmd_list, stdout=subprocess.PIPE, text=True) as proc:
+            for line in proc.stdout:
+                print_to_terminal(line.strip())
 
-        # Add path exclusions
-        paths = [
-            "C:\\Windows\\KMSAutoS",
-            "C:\\Windows\\System32\\SppExtComObjHook.dll",
-            "C:\\Windows\\System32\\SppExtComObjPatcher.exe",
-            "C:\\Windows\\AAct_Tools",
-            "C:\\Windows\\AAct_Tools\\AAct_x64.exe",
-            "C:\\Windows\\AAct_Tools\\AAct_files\\KMSSS.exe",
-            "C:\\Windows\\AAct_Tools\\AAct_files",
-            "C:\\Windows\\KMS",
-            "C:\\WINDOWS\\Temp\\_MAS",
-            "C:\\WINDOWS\\Temp\\__MAS",
-            "C:\\ProgramData\\Online_KMS_Activation",
-            "C:\\ProgramData\\Online_KMS_Activation\\BIN\\cleanosppx64.exe",
-            "C:\\ProgramData\\Online_KMS_Activation\\BIN\\cleanosppx86.exe",
-            "C:\\ProgramData\\Online_KMS_Activation\\Activate.cmd",
-            "C:\\ProgramData\\Online_KMS_Activation\\Info.txt",
-            "C:\\ProgramData\\Online_KMS_Activation\\Activate.cmd",
-        ]
-        for path in paths:
-            subprocess.run(
-                [
-                    "Powershell",
-                    "-nologo",
-                    "-noninteractive",
-                    "-windowStyle",
-                    "hidden",
-                    "-noprofile",
-                    "-command",
-                    "Add-MpPreference",
-                    "-ExclusionPath",
-                    path,
-                    "-Force",
-                ],
-                check=True,
-            )
+        # Disable behavior monitoring
+        cmd_list[4] = "-DisableBehaviorMonitoring"
+        with subprocess.Popen(cmd_list, stdout=subprocess.PIPE, text=True) as proc:
+            for line in proc.stdout:
+                print_to_terminal(line.strip())
+
+        # Disable on-access scanning
+        cmd_list[4] = "-DisableOnAccessProtection"
+        with subprocess.Popen(cmd_list, stdout=subprocess.PIPE, text=True) as proc:
+            for line in proc.stdout:
+                print_to_terminal(line.strip())
+
+        # Disable cloud-based protection
+        cmd_list[4] = "-DisableIOAVProtection"
+        with subprocess.Popen(cmd_list, stdout=subprocess.PIPE, text=True) as proc:
+            for line in proc.stdout:
+                print_to_terminal(line.strip())
+
+        # Disable intrusion prevention system
+        cmd_list[4] = "-DisableIntrusionPreventionSystem"
+        with subprocess.Popen(cmd_list, stdout=subprocess.PIPE, text=True) as proc:
+            for line in proc.stdout:
+                print_to_terminal(line.strip())
+
+        # Disable automatic sample submission
+        cmd_list[4] = "-DisablePrivacyMode"
+        with subprocess.Popen(cmd_list, stdout=subprocess.PIPE, text=True) as proc:
+            for line in proc.stdout:
+                print_to_terminal(line.strip())
+
+        # Call the function to disable Tamper Protection
+        disable_tamper_protection()
 
         # Download and run Defender_Tools.exe
-        defender_tools_url = "https://raw.githubusercontent.com/coff33ninja/AIO/main/TOOLS/2.COMPUTER_CONFIGURATION/Defender_Tools.exe"
-        destination = "C:\\NexTool\\WINDOWS_DEFENDER\\Defender_Tools.exe"
-        subprocess.run(
-            [
-                "aria2c",
-                defender_tools_url,
-                "-d,",
-                "--dir=C:\\NexTool\\WINDOWS_DEFENDER\\",
-                "--allow-overwrite=true",
-                "--disable-ipv6",
-            ],
-            check=True,
+        base_dir = "C:\\NexTool\\Configuration\\SECURITY"
+        if not os.path.exists(base_dir):
+            os.makedirs(base_dir)
+        exe_destination = os.path.join(base_dir, "Defender_Tools.exe")
+        download_file(
+            "https://raw.githubusercontent.com/coff33ninja/AIO/main/TOOLS/2.COMPUTER_CONFIGURATION/Defender_Tools.exe",
+            exe_destination,
         )
-        subprocess.run([destination], check=True)
+        subprocess.run([exe_destination], check=True)
 
         print_to_terminal("WINDOWS DEFENDER DISABLED SUCCESSFULLY.")
+    except Exception as e:
+        print_to_terminal(f"Error occurred: {e}")
+
+
+def disable_tamper_protection():
+    print_to_terminal("ATTEMPTING TO DISABLE TAMPER PROTECTION...")
+
+    cmd = (
+        "powershell -Command "
+        "'Set-ItemProperty -Path HKLM:\\SOFTWARE\\Microsoft\\Windows Defender\\Features -Name TamperProtection -Value 0'"
+    )
+
+    try:
+        subprocess.run(cmd, check=True)
+        print_to_terminal("Tamper Protection disabled successfully.")
+    except subprocess.CalledProcessError as e:
+        print_to_terminal(f"Error occurred during command execution:\n{e.stderr}")
     except Exception as e:
         print_to_terminal(f"Error occurred: {e}")
 
@@ -577,20 +540,22 @@ def remove_windows_defender():
     print_to_terminal("REMOVING WINDOWS DEFENDER...")
     try:
         # Downloading install_wim_tweak.exe
-        tweak_url = "https://raw.githubusercontent.com/coff33ninja/AIO/main/TOOLS/2.COMPUTER_CONFIGURATION/install_wim_tweak.exe"
-        destination = "C:\\NexTool\\install_wim_tweak.exe"
+        base_dir = "C:\\NexTool\\Configuration\\SECURITY"
+        if not os.path.exists(base_dir):
+            os.makedirs(base_dir)
 
-        # Use the download_file method to download the executable
-        download_file(tweak_url, destination)
-
-        # Run the downloaded executable
-        subprocess.run([destination, "/o", "/l", "SHOWCLI"], check=True)
-        subprocess.run(
-            [destination, "/o", "/c", "Windows-Defender", "/r", "SHOWCLI"], check=True
+        exe_destination = os.path.join(base_dir, "install_wim_tweak.exe")
+        download_file(
+            "https://raw.githubusercontent.com/coff33ninja/AIO/main/TOOLS/2.COMPUTER_CONFIGURATION/install_wim_tweak.exe",
+            exe_destination,
         )
 
-        # Other commands...
-
+        # Run the downloaded executable
+        subprocess.run([exe_destination, "/o", "/l", "SHOWCLI"], check=True)
+        subprocess.run(
+            [exe_destination, "/o", "/c", "Windows-Defender", "/r", "SHOWCLI"],
+            check=True,
+        )
         print_to_terminal("WINDOWS DEFENDER REMOVED SUCCESSFULLY.")
     except Exception as e:
         print_to_terminal(f"Error occurred: {e}")
@@ -622,9 +587,14 @@ def run_TELEMETRY():
         subprocess.run(command, check=True)
 
         # Download and run the PowerShell telemetry blocker
+        base_dir = "C:\\NexTool\\Configuration\\TELEMETRY"
+        if not os.path.exists(base_dir):
+            os.makedirs(base_dir)
+
         telemetry_script_url = "https://raw.githubusercontent.com/coff33ninja/AIO/main/TOOLS/2.COMPUTER_CONFIGURATION/block-telemetry.ps1"
-        telemetry_script_path = "C:\\NexTool\\block-telemetry.ps1"
+        telemetry_script_path = os.path.join(base_dir, "block-telemetry.ps1")
         download_file(telemetry_script_url, telemetry_script_path)
+
         command = [
             "powershell",
             "-ExecutionPolicy",
@@ -639,10 +609,12 @@ def run_TELEMETRY():
         # Download and run ooshutup10 with its configuration
         exe_url = "https://raw.githubusercontent.com/coff33ninja/AIO/main/TOOLS/2.COMPUTER_CONFIGURATION/ooshutup10.exe"
         cfg_url = "https://raw.githubusercontent.com/coff33ninja/AIO/main/TOOLS/2.COMPUTER_CONFIGURATION/ooshutup10.cfg"
-        exe_path = "C:\\NexTool\\ooshutup10.exe"
-        cfg_path = "C:\\NexTool\\ooshutup10.cfg"
+        exe_path = os.path.join(base_dir, "ooshutup10.exe")
+        cfg_path = os.path.join(base_dir, "ooshutup10.cfg")
+
         download_file(exe_url, exe_path)
         download_file(cfg_url, cfg_path)
+
         command = [exe_path, cfg_path, "/quiet"]
         subprocess.run(command, check=True)
 
@@ -673,20 +645,25 @@ def run_MAS():
 def start_windows_update():
     print_to_terminal("Starting Windows Manual Updater...")
 
+    # Define the base directory and ensure it exists
+    base_dir = "C:\\NexTool\\UPDATES"
+    if not os.path.exists(base_dir):
+        os.makedirs(base_dir)
+
     # Define the URL for WUpdater.exe and its intended destination
     download_url = "https://raw.githubusercontent.com/coff33ninja/AIO/main/TOOLS/3.UPDATER/WUpdater.exe"
-    destination = "C:\\NexTool\\WUpdater.exe"
+    exe_destination = os.path.join(base_dir, "WUpdater.exe")
 
     try:
         # Download WUpdater.exe
-        urllib.request.urlretrieve(download_url, destination)
+        download_file(download_url, exe_destination)
         print_to_terminal("Downloaded WUpdater.exe successfully.")
 
         # Execute the WUpdater.exe and wait until it completes
-        subprocess.run(destination, check=True)
+        subprocess.run(exe_destination, check=True)
 
         # After the execution, delete the exe (you can keep this if you want to reuse without downloading again)
-        os.remove(destination)
+        os.remove(exe_destination)
         print_to_terminal("Deleted WUpdater.exe.")
 
     except Exception as e:
@@ -745,27 +722,43 @@ def pause_windows_update():
 
 
 def run_patchmypc():
+    base_dir = "C:\\NexTool\\Updater\\PRE-SELECT"
+    if not os.path.exists(base_dir):
+        os.makedirs(base_dir)
+
+    exe_destination = os.path.join(base_dir, "PatchMyPC.exe")
+    ini_destination = os.path.join(base_dir, "PatchMyPC.ini")
+
     download_file(
         "https://raw.githubusercontent.com/coff33ninja/AIO/main/TOOLS/3.UPDATER/SOFTWARE/PRE-SELECT/PatchMyPC.exe",
-        "C:\\NexTool\\PatchMyPC.exe",
+        exe_destination,
     )
     download_file(
         "https://raw.githubusercontent.com/coff33ninja/AIO/main/TOOLS/3.UPDATER/SOFTWARE/PRE-SELECT/PatchMyPC.ini",
-        "C:\\NexTool\\PatchMyPC.ini",
+        ini_destination,
     )
-    subprocess.run(["C:\\NexTool\\PatchMyPC.exe", "/auto", "switch"], check=True)
+
+    subprocess.run([exe_destination, "/auto", "switch"], check=True)
 
 
 def run_patchmypc_own_selections():
+    base_dir = "C:\\NexTool\\Updater\\SELF-SELECT"
+    if not os.path.exists(base_dir):
+        os.makedirs(base_dir)
+
+    exe_destination = os.path.join(base_dir, "PatchMyPC.exe")
+    ini_destination = os.path.join(base_dir, "PatchMyPC.ini")
+
     download_file(
         "https://raw.githubusercontent.com/coff33ninja/AIO/main/TOOLS/3.UPDATER/SOFTWARE/SELF-SELECT/PatchMyPC.exe",
-        "C:\\NexTool\\PatchMyPC.exe",
+        exe_destination,
     )
     download_file(
         "https://raw.githubusercontent.com/coff33ninja/AIO/main/TOOLS/3.UPDATER/SOFTWARE/SELF-SELECT/PatchMyPC.ini",
-        "C:\\NexTool\\PatchMyPC.ini",
+        ini_destination,
     )
-    subprocess.run(["C:\\NexTool\\PatchMyPC.exe"], check=True)
+
+    subprocess.run([exe_destination], check=True)
 
 
 def install_choco_packages():
@@ -870,16 +863,21 @@ def run_winget_gui():
 
 
 def run_driver_updater():
+    print_to_terminal("RUNNING DRIVER UPDATER...")
     try:
+        # Setting base directory and paths
+        base_dir = "C:\\NexTool\\Updater"
+        if not os.path.exists(base_dir):
+            os.makedirs(base_dir)
+
         # Download the Snappy Driver zip file
-        snappy_driver_url = "https://raw.githubusercontent.com/coff33ninja/AIO/main/TOOLS/3.UPDATER/SNAPPY_DRIVER.zip"
-        snappy_zip_path = "C:\\NexTool\\SNAPPY_DRIVER.zip"
-        snappy_extract_path = "C:\\NexTool\\SNAPPY_DRIVER"
+        snappy_zip_path = os.path.join(base_dir, "SNAPPY_DRIVER.zip")
+        snappy_extract_path = os.path.join(base_dir, "SNAPPY_DRIVER")
 
-        # Download using urllib (make sure to import it at the top of your script)
-        import urllib.request
-
-        urllib.request.urlretrieve(snappy_driver_url, snappy_zip_path)
+        download_file(
+            "https://raw.githubusercontent.com/coff33ninja/AIO/main/TOOLS/3.UPDATER/SNAPPY_DRIVER.zip",
+            snappy_zip_path,
+        )
 
         # Extract the downloaded zip
         with zipfile.ZipFile(snappy_zip_path, "r") as zip_ref:
@@ -916,92 +914,66 @@ def run_driver_updater():
 
 
 def download_and_setup_office():
-    def download_progress(count, block_size, total_size):
-        percent_complete = int(count * block_size * 100 / total_size)
-        download_progress_bar["value"] = percent_complete
-        app.update_idletasks()
-        print_to_terminal(f"Downloading: {percent_complete}%")
-
-    def extract_progress(zip_file, destination_folder):
-        files = zip_file.namelist()
-        total_files = len(files)
-
-        # If zip contains a root directory, get its name
-        root_dir = None
-        if len(files) > 0 and files[0].endswith("/"):
-            root_dir = files[0]
-
-        for i, file in enumerate(files, 1):
-            # Check if we're inside the root directory
-            if root_dir and file.startswith(root_dir):
-                file_without_root = file[len(root_dir) :]
-                full_extract_path = os.path.join(destination_folder, file_without_root)
-            else:
-                full_extract_path = os.path.join(destination_folder, file)
-
-            # If the file is inside directories, ensure they are created
-            if os.path.isdir(file):  # if it's a directory
-                os.makedirs(full_extract_path, exist_ok=True)
-            else:
-                os.makedirs(os.path.dirname(full_extract_path), exist_ok=True)
-                with open(full_extract_path, "wb") as fout:
-                    fout.write(zip_file.read(file))
-
-            percent_complete = int(i * 100 / total_files)
-            extract_progress_bar["value"] = percent_complete
-            app.update_idletasks()
-            print_to_terminal(f"Extracting: {percent_complete}%")
-
-    # Determine system architecture
-    arch = platform.architecture()[0]
-    if arch == "64bit":
-        architecture = "64"
-    elif arch == "32bit":
-        architecture = "32"
-    else:
-        print_to_terminal(f"Unsupported architecture: {arch}")
-        return
-
-    url = TRUSTED_URLS.get(architecture)
-    if not url:
-        print_to_terminal("Invalid architecture specified.")
-        return
-
-    destination_zip = os.path.join(BASE_DIR, f"office_tool_{architecture}.zip")
-    destination_folder = BASE_DIR
-    destination_xml = os.path.join(
-        destination_folder, f"office_config_{architecture}.xml"
-    )
+    print_to_terminal("INITIATING OFFICE TOOL PLUS SETUP...")
 
     try:
+        # Determine system architecture
+        arch = platform.architecture()[0]
+        if arch == "64bit":
+            architecture = "64"
+        elif arch == "32bit":
+            architecture = "32"
+        else:
+            print_to_terminal(f"Unsupported architecture: {arch}")
+            return
+
+        # Fetch the correct URL from TRUSTED_URLS based on architecture
+        url = TRUSTED_URLS.get(architecture)
+        if not url:
+            print_to_terminal("Invalid architecture specified.")
+            return
+
+        # Setting base directory and paths
+        office_dir = os.path.join(BASE_DIR, f"Office_Tool_{architecture}")
+        if not os.path.exists(office_dir):
+            os.makedirs(office_dir)
+
+        destination_zip = os.path.join(office_dir, "Office_Tool.zip")
+        destination_folder = office_dir
+        destination_xml = os.path.join(office_dir, "office_config.xml")
+
         # Download
         print_to_terminal("Attempting to download Office Tool Plus...")
-        urllib.request.urlretrieve(url, destination_zip, reporthook=download_progress)
+        download_file(url, destination_zip)
         print_to_terminal("Downloaded Office Tool Plus.")
 
         # Extract
         print_to_terminal("Attempting to extract Office Tool Plus...")
         with zipfile.ZipFile(destination_zip, "r") as zip_ref:
-            extract_progress(zip_ref, destination_folder)
+            zip_ref.extractall(destination_folder)
         print_to_terminal("Extracted Office Tool Plus.")
 
         # Create XML
         create_office_config(architecture, destination_xml)
 
+        # Show popup
+        message = (
+            f"The Office Tool Plus (x{architecture}) has been set up at {destination_folder}."
+            "\n\nAn XML configuration preset is available for you to import, making the setup process easier."
+            "\n\nYou can find the import option under the 'Deploy Office' menu. Navigate to the 'Deploy' main menu, select the dropdown, and choose 'import configuration'."
+        )
+
+        messagebox.showinfo("Office Setup", message)
+
         # Execute Office Tool Plus with XML configuration
-        otp_exe_path = os.path.join(destination_folder, "Office Tool Plus.exe")
+        otp_exe_path = os.path.join(
+            destination_folder, "Office Tool", "Office Tool Plus.exe"
+        )
         subprocess.run([otp_exe_path, "-xml", destination_xml], check=True)
         print_to_terminal("Office Tool Plus launched with XML configuration!")
 
-        # Show popup
-        message = f"The Office Tool Plus (x{architecture}) has been set up at {destination_folder}. An XML configuration preset is available for you to import and make the setup process easier."
-        messagebox.showinfo("Office Setup", message)
-
     except Exception as e:
         print_to_terminal(f"Error occurred: {e}")
-
-    download_progress_bar["value"] = 0
-    extract_progress_bar["value"] = 0
 
 
 def create_office_config(architecture, destination):
@@ -1092,7 +1064,7 @@ def show_main_menu():
             text=main_item,
             command=lambda main_item=main_item: show_sub_menu(main_item),
         )
-        main_button.grid(row=idx, column=0, sticky="ew", padx=10, pady=5)
+        main_button.grid(row=idx, column=0, sticky="nsew", padx=10, pady=5)
         tooltip_text = tabs_tooltips.get(main_item, default_tooltip)
         ToolTip(main_button, text=tooltip_text)
 
@@ -1237,36 +1209,37 @@ default_tooltip = "This is the Main Menu For NexTool."
 
 # Creating left frame for menu items
 left_frame = ttk.Frame(app)
-left_frame.grid(row=0, column=0, sticky="ns", padx=5, pady=5)
+left_frame.grid(row=0, column=0, sticky="nsew", padx=5, pady=5)
 
 # Creating right frame for the terminal
 right_frame = ttk.Frame(app)
 right_frame.grid(row=0, column=1, sticky="nsew", padx=5, pady=5)
 
-app.grid_columnconfigure(1, weight=1)
+app.grid_columnconfigure(0, weight=1)
+app.grid_columnconfigure(1, weight=3)
 app.grid_rowconfigure(0, weight=1)
 
 # Embedded Terminal
 terminal = scrolledtext.ScrolledText(
-    right_frame, undo=True, wrap=tk.WORD, bg="black", fg="white", font=("Consolas", 12)
+    right_frame,
+    undo=True,
+    wrap=tk.WORD,
+    bg="black",
+    fg="white",
+    font=("Consolas", 12),
+    width=80,
+    height=15,  # Adjust width and height values as needed
 )
 terminal.pack(fill="both", expand=True, padx=10, pady=10)
 
-# Download progress bar
-download_progress_label = ttk.Label(right_frame, text="Download Progress")
-download_progress_label.pack(pady=5)
-download_progress_bar = ttk.Progressbar(
-    right_frame, orient=tk.HORIZONTAL, length=400, mode="determinate"
-)
-download_progress_bar.pack(pady=5)
+# Create a global progress bar
+progress_frame = tk.Frame(right_frame)
+progress_frame.pack(pady=10)
 
-# Extraction progress bar
-extract_progress_label = ttk.Label(right_frame, text="Extraction Progress")
-extract_progress_label.pack(pady=5)
-extract_progress_bar = ttk.Progressbar(
-    right_frame, orient=tk.HORIZONTAL, length=400, mode="determinate"
+progress_bar = ttk.Progressbar(
+    progress_frame, orient=tk.HORIZONTAL, length=300, mode="determinate"
 )
-extract_progress_bar.pack(pady=5)
+progress_bar.pack()
 
 # Fetch System Information
 c = wmi.WMI()
@@ -1352,13 +1325,5 @@ tabs = {
 
 # Display the main menu at startup
 show_main_menu()
-
-# Test button for direct access to Office setup
-test_button = ttk.Button(
-    left_frame, text="Test Office Setup", command=download_and_setup_office
-)
-test_button.grid(
-    sticky="ew", padx=10, pady=10
-)  # Add some padding for visual separation
 
 app.mainloop()
