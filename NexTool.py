@@ -915,8 +915,52 @@ def run_driver_updater():
         print_to_terminal(f"Error occurred: {e}")
 
 
-def download_and_setup_office(architecture):
-    print_to_terminal("Starting the Office Installation process...")
+def download_and_setup_office():
+    def download_progress(count, block_size, total_size):
+        percent_complete = int(count * block_size * 100 / total_size)
+        download_progress_bar["value"] = percent_complete
+        app.update_idletasks()
+        print_to_terminal(f"Downloading: {percent_complete}%")
+
+    def extract_progress(zip_file, destination_folder):
+        files = zip_file.namelist()
+        total_files = len(files)
+
+        # If zip contains a root directory, get its name
+        root_dir = None
+        if len(files) > 0 and files[0].endswith("/"):
+            root_dir = files[0]
+
+        for i, file in enumerate(files, 1):
+            # Check if we're inside the root directory
+            if root_dir and file.startswith(root_dir):
+                file_without_root = file[len(root_dir) :]
+                full_extract_path = os.path.join(destination_folder, file_without_root)
+            else:
+                full_extract_path = os.path.join(destination_folder, file)
+
+            # If the file is inside directories, ensure they are created
+            if os.path.isdir(file):  # if it's a directory
+                os.makedirs(full_extract_path, exist_ok=True)
+            else:
+                os.makedirs(os.path.dirname(full_extract_path), exist_ok=True)
+                with open(full_extract_path, "wb") as fout:
+                    fout.write(zip_file.read(file))
+
+            percent_complete = int(i * 100 / total_files)
+            extract_progress_bar["value"] = percent_complete
+            app.update_idletasks()
+            print_to_terminal(f"Extracting: {percent_complete}%")
+
+    # Determine system architecture
+    arch = platform.architecture()[0]
+    if arch == "64bit":
+        architecture = "64"
+    elif arch == "32bit":
+        architecture = "32"
+    else:
+        print_to_terminal(f"Unsupported architecture: {arch}")
+        return
 
     url = TRUSTED_URLS.get(architecture)
     if not url:
@@ -924,7 +968,7 @@ def download_and_setup_office(architecture):
         return
 
     destination_zip = os.path.join(BASE_DIR, f"office_tool_{architecture}.zip")
-    destination_folder = os.path.join(BASE_DIR, "Office Tool")
+    destination_folder = BASE_DIR
     destination_xml = os.path.join(
         destination_folder, f"office_config_{architecture}.xml"
     )
@@ -932,25 +976,22 @@ def download_and_setup_office(architecture):
     try:
         # Download
         print_to_terminal("Attempting to download Office Tool Plus...")
-        urllib.request.urlretrieve(url, destination_zip)
+        urllib.request.urlretrieve(url, destination_zip, reporthook=download_progress)
         print_to_terminal("Downloaded Office Tool Plus.")
 
-        # Verify and Extract
-        if verify_path(BASE_DIR, destination_zip):
-            print_to_terminal("Attempting to extract Office Tool Plus...")
-            with zipfile.ZipFile(destination_zip, "r") as zip_ref:
-                zip_ref.extractall(destination_folder)
-            print_to_terminal("Extracted Office Tool Plus.")
-        else:
-            print_to_terminal("Invalid destination path.")
+        # Extract
+        print_to_terminal("Attempting to extract Office Tool Plus...")
+        with zipfile.ZipFile(destination_zip, "r") as zip_ref:
+            extract_progress(zip_ref, destination_folder)
+        print_to_terminal("Extracted Office Tool Plus.")
+
+        # Create XML
+        create_office_config(architecture, destination_xml)
 
         # Execute Office Tool Plus with XML configuration
         otp_exe_path = os.path.join(destination_folder, "Office Tool Plus.exe")
         subprocess.run([otp_exe_path, "-xml", destination_xml], check=True)
-        print_to_terminal("Office Tool Plus launched!")
-
-        # Create XML
-        create_office_config(architecture, destination_xml)
+        print_to_terminal("Office Tool Plus launched with XML configuration!")
 
         # Show popup
         message = f"The Office Tool Plus (x{architecture}) has been set up at {destination_folder}. An XML configuration preset is available for you to import and make the setup process easier."
@@ -958,6 +999,9 @@ def download_and_setup_office(architecture):
 
     except Exception as e:
         print_to_terminal(f"Error occurred: {e}")
+
+    download_progress_bar["value"] = 0
+    extract_progress_bar["value"] = 0
 
 
 def create_office_config(architecture, destination):
@@ -1026,8 +1070,9 @@ def button_action(sub_item):
         "Winget Pre-Set Selections": install_winget_packages,
         "Winget GUI": run_winget_gui,
         "Driver Updater": run_driver_updater,
-        "Download and Setup Office": download_and_setup_office,
+        "Office Installations": download_and_setup_office,
     }
+    print(f"Button Action Called for: {sub_item}")  # Debug print
     function_to_run = function_mapping.get(sub_item)
     if function_to_run:
         function_to_run()
@@ -1207,6 +1252,22 @@ terminal = scrolledtext.ScrolledText(
 )
 terminal.pack(fill="both", expand=True, padx=10, pady=10)
 
+# Download progress bar
+download_progress_label = ttk.Label(right_frame, text="Download Progress")
+download_progress_label.pack(pady=5)
+download_progress_bar = ttk.Progressbar(
+    right_frame, orient=tk.HORIZONTAL, length=400, mode="determinate"
+)
+download_progress_bar.pack(pady=5)
+
+# Extraction progress bar
+extract_progress_label = ttk.Label(right_frame, text="Extraction Progress")
+extract_progress_label.pack(pady=5)
+extract_progress_bar = ttk.Progressbar(
+    right_frame, orient=tk.HORIZONTAL, length=400, mode="determinate"
+)
+extract_progress_bar.pack(pady=5)
+
 # Fetch System Information
 c = wmi.WMI()
 
@@ -1291,5 +1352,13 @@ tabs = {
 
 # Display the main menu at startup
 show_main_menu()
+
+# Test button for direct access to Office setup
+test_button = ttk.Button(
+    left_frame, text="Test Office Setup", command=download_and_setup_office
+)
+test_button.grid(
+    sticky="ew", padx=10, pady=10
+)  # Add some padding for visual separation
 
 app.mainloop()
