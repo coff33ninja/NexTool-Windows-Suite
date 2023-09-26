@@ -17,6 +17,7 @@ import win32api
 import win32con
 import win32com.client
 import zipfile
+import ctypes
 
 app = ThemedTk(theme="breeze-dark")
 app.title("NexTool Windows Suite")
@@ -68,6 +69,15 @@ def download_file(url, destination):
         print_to_terminal(f"Error downloading {url} to {destination}: {e}")
 
 
+def msg_box(message, title, type=0):
+    # Depending on 'type', you can show different kinds of message boxes.
+    # I'm assuming type=4 is for 'Yes/No' based on your code.
+    # Adjust this as needed.
+    if type == 4:
+        return messagebox.askyesno(title, message)
+    # Add more conditions if you have other types.
+
+
 def extract_zip(zip_path, destination_folder):
     """
     Extract a zip file to a specified folder and update the progress bar.
@@ -86,6 +96,10 @@ def extract_zip(zip_path, destination_folder):
 
     with zipfile.ZipFile(zip_path, "r") as zip_ref:
         extract_progress(zip_ref)
+
+
+def msg_box(message, title, style):
+    return ctypes.windll.user32.MessageBoxW(0, message, title, style)
 
 
 def run_quick_info():
@@ -762,6 +776,21 @@ def run_patchmypc_own_selections():
 
 
 def install_choco_packages():
+    response = msg_box(
+        "Warning: This script will install a collection of hand-picked applications using Chocolatey. "
+        "If you don't want to proceed, please consider another method to install applications. "
+        "Do you want to continue?",
+        "Chocolatey Installation Warning",
+        4,
+    )
+
+    # If the user clicks 'No' in the MessageBox
+    if response == 7:
+        return
+
+    progress_label.config(text="Preparing installations...")
+    app.update()
+
     packages = [
         "googlechrome",
         "git",
@@ -778,9 +807,7 @@ def install_choco_packages():
         "dotnetfx",
         "silverlight",
         "vcredist-all",
-        "python2",
         "python3",
-        "googlechrome",
         "firefox",
         "edgedeflector",
         "k-litecodecpackfull",
@@ -794,58 +821,264 @@ def install_choco_packages():
         "anydesk.install",
         "teamviewer",
     ]
+    total_packages = len(packages)
+    installed_packages = []
+    failed_packages = []
 
-    choco_path = os.path.join(os.environ["ProgramData"], "Chocolatey")
+    if not is_chocolatey_installed():
+        install_chocolatey()
 
-    if os.path.exists(choco_path):
-        for package in packages:
-            subprocess.run(["choco", "install", package, "-y"], check=True)
-    else:
-        install_cmd = "Set-ExecutionPolicy Bypass -Scope Process -Force; [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072; iex ((New-Object System.Net.WebClient).DownloadString('https://chocolatey.org/install.ps1'))"
-        subprocess.run(
-            ["powershell", "-ExecutionPolicy", "Bypass", "-Command", install_cmd],
-            check=True,
+    for index, package in enumerate(packages, start=1):
+        progress_label.config(
+            text=f"Installing {index} of {total_packages} applications: {package}"
         )
+        progress_bar["value"] = (
+            index / total_packages
+        ) * 100  # Update progress bar value
+        app.update()
 
-        for package in packages:
+        print(f"Attempting to install {package}...")
+
+        try:
             subprocess.run(["choco", "install", package, "-y"], check=True)
+            print(f"{package} installed successfully!")
+            installed_packages.append(package)
+        except subprocess.CalledProcessError:
+            progress_label.config(text=f"Error installing {package}.")
+            app.update()
+            failed_packages.append(package)
+        except Exception as e:
+            progress_label.config(text=f"An unexpected error occurred: {e}")
+            app.update()
+            failed_packages.append(package)
+
+    progress_label.config(text="Installations complete.")
+    app.update()
+
+    # Generate a log file on the user's desktop
+    user_desktop = os.path.join(os.path.expanduser("~"), "Desktop")
+    log_file_path = os.path.join(user_desktop, "choco_installation_log.txt")
+
+    with open(log_file_path, "w") as log_file:
+        log_file.write("Chocolatey Installation Log\n")
+        log_file.write("=" * 40 + "\n\n")
+
+        log_file.write("Installed Packages:\n")
+        for package in installed_packages:
+            log_file.write(f"- {package}\n")
+
+        log_file.write("\nFailed Packages:\n")
+        for package in failed_packages:
+            log_file.write(f"- {package}\n")
+
+    print(f"Installation complete. A log file has been saved to: {log_file_path}")
+    inform_about_choco_gui
+
+
+def is_chocolatey_installed():
+    choco_path = os.path.join(os.environ["ProgramData"], "Chocolatey")
+    return os.path.exists(choco_path)
+
+
+def install_chocolatey():
+    install_cmd = (
+        "Set-ExecutionPolicy Bypass -Scope Process -Force; "
+        "[System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072; "
+        "iex ((New-Object System.Net.WebClient).DownloadString('https://chocolatey.org/install.ps1'))"
+    )
+    subprocess.run(
+        ["powershell", "-ExecutionPolicy", "Bypass", "-Command", install_cmd],
+        check=True,
+    )
+
+
+def inform_about_choco_gui():
+    response = msg_box(
+        "Installation process completed. If you wish to manage your applications in a GUI, "
+        "consider using Chocolatey's GUI. Do you want to install and open Chocolatey GUI now?",
+        "Chocolatey GUI Information",
+        4,
+    )
+
+    if response == 6:  # If the user clicks 'Yes'
+        run_chocolatey_gui()
 
 
 def run_chocolatey_gui():
-    subprocess.run(
-        [
-            "powershell",
-            "-ExecutionPolicy",
-            "Bypass",
-            "-Command",
-            "[System.Net.ServicePointManager]::SecurityProtocol = 3072; iex ((New-Object System.Net.WebClient).DownloadString('https://community.chocolatey.org/install.ps1'))",
-        ]
-    )
-    subprocess.run(["powershell", "choco", "upgrade", "all", "--noop"], check=True)
-    subprocess.run(["powershell", "choco", "install", "chocolateygui"], check=True)
-    # subprocess.run(["powershell", "choco", "install", "hot-chocolatey"], check=True) # Uncomment if needed.
+    try:
+        print("Installing Chocolatey GUI...")
+        subprocess.run(["choco", "install", "chocolateygui", "-y"], check=True)
+        print("Chocolatey GUI installed successfully. Launching...")
+        subprocess.run(
+            ["chocolateygui"], check=True
+        )  # Assuming 'chocolateygui' is the correct command to launch the GUI. Modify if needed.
+    except subprocess.CalledProcessError as e:
+        print(f"Error occurred during installation or launch:\n{e}")
+    except Exception as e:
+        print(f"Unexpected error occurred: {e}")
+
+
+def install_adobe_reader():
+    architecture = platform.architecture()[0]
+
+    if architecture == "32bit":
+        package_id = "Adobe.Acrobat.Reader.32-bit"
+    elif architecture == "64bit":
+        package_id = "Adobe.Acrobat.Reader.64-bit"
+    else:
+        print(
+            f"Unknown system architecture: {architecture}. Cannot install Adobe Acrobat Reader."
+        )
+        return
+
+    print(f"Installing Adobe Acrobat Reader for {architecture}...")
+    try:
+        subprocess.run(["winget", "install", "--id=" + package_id, "-e"], check=True)
+        print(f"Adobe Acrobat Reader for {architecture} installed successfully!")
+    except subprocess.CalledProcessError:
+        print(f"Error installing Adobe Acrobat Reader for {architecture}.")
+    except Exception as e:
+        print(f"An unexpected error occurred: {e}")
 
 
 def install_winget_packages():
-    packages = [
-        "microsoftedge",  # 'googlechrome' - Microsoft Edge is a direct analog to Chrome in Winget
-        "git.git",  # 'git'
-        # 'adobeair',  # There's no direct Adobe AIR package in Winget
-        # 'adobeshockwaveplayer',  # No direct Adobe Shockwave Player package in Winget
-        # 'javaruntime',  # No direct Java Runtime package in Winget, but there are OpenJDK variants
-        # .NET framework installations might be better handled outside of package managers for more control
-        "vlc.vlc",  # 'vlc'
-        "7zip.7zip",  # '7zip'
-        # 'adobereader',  # Adobe Reader has licensing issues, consider using other PDF readers like Foxit
-        # 'cdburnerxp',  # No direct CD Burner XP package in Winget
-        "microsoft.skypeapp",  # 'skype'
-        # 'winaero-tweaker',  # No direct WinAero Tweaker package in Winget
-        # 'anydesk.install',  # No direct AnyDesk package in Winget, but there are alternatives like TeamViewer
-        "teamviewer.teamviewer",  # 'teamviewer'
-    ]
+    response = msg_box(
+        "Warning: This script will install a collection of hand-picked applications using Winget. "
+        "If you don't want to proceed, please use the Winget GUI which will be the next menu option in the GUI. "
+        "Do you want to continue?",
+        "Winget Installation Warning",
+        4,
+    )
 
-    for package in packages:
-        subprocess.run(["winget", "install", package], check=True)
+    # If the user clicks 'No' in the MessageBox
+    if response == 7:
+        return
+
+        # Before the loop:
+    progress_label.config(text="Preparing installations...")
+    app.update()
+
+    install_adobe_reader()
+
+    packages = [
+        "Mozilla.Firefox",
+        "VideoLAN.VLC",
+        "7zip.7zip",
+        "AnyDeskSoftwareGmbH.AnyDesk",
+        "Twilio.Authy",
+        "Gyan.FFmpeg.Shared",
+        "Gyan.FFmpeg",
+        "Google.Chrome",
+        "Oracle.JavaRuntimeEnvironment",
+        "Oracle.JDK.19",
+        "Oracle.JDK.18",
+        "Oracle.JDK.17",
+        "CodecGuide.K-LiteCodecPack.Full",
+        "Microsoft.DotNet.Runtime.3_1",
+        "Microsoft.DotNet.Runtime.5",
+        "Microsoft.DotNet.Runtime.6",
+        "Microsoft.DotNet.Runtime.7",
+        "Microsoft.DotNet.Runtime.Preview",
+        "Microsoft.dotnet",
+        "Microsoft.DotNet.DesktopRuntime.3_1",
+        "Microsoft.DotNet.DesktopRuntime.5",
+        "Microsoft.DotNet.DesktopRuntime.6",
+        "Microsoft.DotNet.DesktopRuntime.7",
+        "Microsoft.Edge",
+        "Microsoft.VCRedist.2005.x86",
+        "Microsoft.VCRedist.2005.x64",
+        "Microsoft.VCRedist.2008.x64",
+        "Microsoft.VCRedist.2008.x86",
+        "Microsoft.VCRedist.2010.x64",
+        "Microsoft.VCRedist.2010.x86",
+        "Microsoft.VCRedist.2012.x64",
+        "Microsoft.VCRedist.2012.x86",
+        "Microsoft.VCRedist.2013.x64",
+        "Microsoft.VCRedist.2013.x86",
+        "Microsoft.VCRedist.2015+.x64",
+        "Microsoft.VCRedist.2015+.x86",
+        "Microsoft.dotnetRuntime.3-x64",
+        "Microsoft.dotnetRuntime.3-x86",
+        "Microsoft.dotnetRuntime.5-x64",
+        "Microsoft.dotnetRuntime.5-x86",
+        "Microsoft.dotnetRuntime.6-x64",
+        "Microsoft.dotnetRuntime.6-x86",
+        "Microsoft.XNARedist",
+        "Nvidia.PhysX",
+        "Microsoft.PowerShell",
+        "Python.Python.3.11",
+        "VinaySajip.PythonLauncher",
+        "qBittorrent.qBittorrent",
+        "Ookla.Speedtest.CLI",
+        "Ookla.Speedtest.Desktop",
+        "TeamViewer.TeamViewer",
+        "ClockworkMod.UniversalADBDriver",
+        "WinSCP.WinSCP",
+    ]
+    total_packages = len(packages)
+    installed_packages = []
+    failed_packages = []
+
+    for index, package in enumerate(packages, start=1):
+        progress_label.config(
+            text=f"Installing {index} of {total_packages} applications: {package}"
+        )
+        progress_bar["value"] = (
+            index / total_packages
+        ) * 100  # Update progress bar value
+        app.update()  # This will update the GUI for each iteration
+
+        print(f"Attempting to install {package}...")
+
+        try:
+            subprocess.run(["winget", "install", "--id=" + package, "-e"], check=True)
+            print(f"{package} installed successfully!")
+            installed_packages.append(package)
+        except subprocess.CalledProcessError:
+            progress_label.config(text=f"Error installing {package}.")
+            app.update()
+            failed_packages.append(package)
+        except Exception as e:
+            progress_label.config(text=f"An unexpected error occurred: {e}")
+            app.update()
+            failed_packages.append(package)
+
+    progress_label.config(text="Installations complete.")
+    app.update()
+
+    # Generate a log file on the user's desktop
+    user_desktop = os.path.join(os.path.expanduser("~"), "Desktop")
+    log_file_path = os.path.join(user_desktop, "winget_installation_log.txt")
+
+    with open(log_file_path, "w") as log_file:
+        log_file.write("Winget Installation Log\n")
+        log_file.write("=" * 40 + "\n\n")
+
+        log_file.write("Installed Packages:\n")
+        for package in installed_packages:
+            log_file.write(f"- {package}\n")
+
+        log_file.write("\nFailed Packages:\n")
+        for package in failed_packages:
+            log_file.write(f"- {package}\n")
+
+    print(f"Installation complete. A log file has been saved to: {log_file_path}")
+    # Inform the user about the Winget GUI
+    inform_about_winget_gui()
+
+
+def inform_about_winget_gui():
+    response = msg_box(
+        "Installation process completed. If you wish to install or update other applications, "
+        "or manage your existing installations, consider using the Winget GUI which offers a user-friendly interface "
+        "with features such as updates, installation tracking, and more. Do you want to install and open Winget GUI now?",
+        "Winget GUI Information",
+        4,
+    )
+
+    if response == 6:  # If the user clicks 'Yes'
+        run_winget_gui()  # This will attempt to install the WingetUI Store if it's not already
+        print_to_terminal("Winget GUI installed successfully.")
 
 
 def run_winget_gui():
@@ -855,11 +1088,18 @@ def run_winget_gui():
             ["winget", "install", "-e", "--id", "SomePythonThings.WingetUIStore"],
             check=True,
         )
-        print_to_terminal("WingetUI Store installed successfully.")
+        print(f"WingetUI Store installed successfully.")
+
+        # Launch the WingetUI
+        subprocess.run(
+            ["WingetUI"], check=True
+        )  # replace "WingetUI" with the actual command or path to the executable
+        print(f"WingetUI Store launched successfully.")
+
     except subprocess.CalledProcessError as e:
-        print_to_terminal(f"Error occurred during installation:\n{e.stderr}")
+        print(f"Error occurred during installation or launch:\n{e.stderr}")
     except Exception as e:
-        print_to_terminal(f"Error occurred: {e}")
+        print(f"Error occurred: {e}")
 
 
 def run_driver_updater():
@@ -1235,7 +1475,8 @@ terminal.pack(fill="both", expand=True, padx=10, pady=10)
 # Create a global progress bar
 progress_frame = tk.Frame(right_frame)
 progress_frame.pack(pady=10)
-
+progress_label = ttk.Label(right_frame, text="", font=("Consolas", 12))
+progress_label.pack(pady=5)
 progress_bar = ttk.Progressbar(
     progress_frame, orient=tk.HORIZONTAL, length=300, mode="determinate"
 )
