@@ -56,32 +56,53 @@ choco install choco -y || choco upgrade choco -y
 choco install aria2 -y || choco upgrade aria2 -y
 choco install wget -y || choco upgrade wget -y
 choco install curl -y || choco upgrade curl -y
+choco install powershell-core || choco upgrade powershell-core -y
 
 rem Check if winget is installed
 winget --version >NUL 2>&1
 IF %ERRORLEVEL% NEQ 0 (
    echo Winget is not detected, attempting installation...
 
-   echo [Method 1] Trying to install using latest release link from GitHub...
-   powershell -Command "Invoke-WebRequest -Uri 'https://github.com/microsoft/winget-cli/releases/latest/download/Microsoft.DesktopAppInstaller_8wekyb3d8bbwe.msixbundle' -OutFile 'C:\PS\WinGet.msixbundle'"
-   powershell -Command "Add-AppxPackage 'C:\PS\WinGet.msixbundle'"
+   echo [Method 1] Trying to install using latest release link with PowerShell...
+   powershell -Command "Invoke-WebRequest -Uri 'https://github.com/microsoft/winget-cli/releases/latest/download/Microsoft.DesktopAppInstaller_8wekyb3d8bbwe.msixbundle' -OutFile 'C:\PS\WinGet.ps1.msixbundle'"
 
-   winget --version >NUL 2>&1
-   IF %ERRORLEVEL% NEQ 0 (
-      echo [Method 2] Trying to install using a specific version from GitHub...
-      powershell -Command "Invoke-WebRequest -Uri 'https://github.com/microsoft/winget-cli/releases/download/v1.5.2201/Microsoft.DesktopAppInstaller_8wekyb3d8bbwe.msixbundle' -OutFile 'C:\PS\WinGet.msixbundle'"
-      powershell -Command "Add-AppxPackage 'C:\PS\WinGet.msixbundle'"
+   IF NOT EXIST 'C:\PS\WinGet.ps1.msixbundle' (
+      echo [Method 1.1] Trying to install using latest release link with PowerShell 7...
+      pwsh -Command "Invoke-WebRequest -Uri 'https://github.com/microsoft/winget-cli/releases/latest/download/Microsoft.DesktopAppInstaller_8wekyb3d8bbwe.msixbundle' -OutFile 'C:\PS\WinGet.pwsh1.msixbundle'"
+   ) ELSE (
+      GOTO InstallWinget
    )
 
+   IF NOT EXIST 'C:\PS\WinGet.pwsh1.msixbundle' (
+      echo [Method 1.2] PowerShell method failed. Trying with aria2...
+      aria2c "https://github.com/microsoft/winget-cli/releases/latest/download/Microsoft.DesktopAppInstaller_8wekyb3d8bbwe.msixbundle" -d C:\PS -o WinGet.aria2.msixbundle
+   ) ELSE (
+      GOTO InstallWinget
+   )
+
+   IF NOT EXIST 'C:\PS\WinGet.aria2.msixbundle' (
+      echo [Method 1.3] aria2 method failed. Trying with curl...
+      curl -L -o C:\PS\WinGet.curl.msixbundle "https://github.com/microsoft/winget-cli/releases/latest/download/Microsoft.DesktopAppInstaller_8wekyb3d8bbwe.msixbundle"
+   ) ELSE (
+      GOTO InstallWinget
+   )
+
+   :InstallWinget
+   powershell -Command "Get-ChildItem 'C:\PS\WinGet.*.msixbundle' | ForEach-Object { Add-AppxPackage $_.FullName }"
+
+   rem Cleanup .msixbundle files
+   del /Q C:\PS\*.msixbundle
+
    winget --version >NUL 2>&1
    IF %ERRORLEVEL% NEQ 0 (
-      echo [Method 3] Please manually install "App Installer" from the Microsoft Store.
+      echo [Method 2] Please manually install "App Installer" from the Microsoft Store.
       echo Opening the Microsoft Store page for "App Installer"...
       start "https://apps.microsoft.com/store/detail/app-installer/9NBLGGH4NNS1"
       pause
       exit
    )
 )
+
 cls
 
 for /f "delims=" %%i in ('winget --version') do set WINGET_VERSION=%%i
