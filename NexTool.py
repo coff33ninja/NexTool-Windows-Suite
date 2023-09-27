@@ -68,16 +68,6 @@ def download_file(url, destination):
     except Exception as e:
         print_to_terminal(f"Error downloading {url} to {destination}: {e}")
 
-
-def msg_box(message, title, type=0):
-    # Depending on 'type', you can show different kinds of message boxes.
-    # I'm assuming type=4 is for 'Yes/No' based on your code.
-    # Adjust this as needed.
-    if type == 4:
-        return messagebox.askyesno(title, message)
-    # Add more conditions if you have other types.
-
-
 def extract_zip(zip_path, destination_folder):
     """
     Extract a zip file to a specified folder and update the progress bar.
