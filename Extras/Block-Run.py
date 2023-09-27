@@ -27,10 +27,13 @@ class CombinedGame:
         """Loads an image from the ALLOWED_IMAGES mapping"""
         if image_id in self.ALLOWED_IMAGES:
             image_path = os.path.join(base_dir, self.ALLOWED_IMAGES[image_id])
-            if os.path.exists(image_path):
-                return PhotoImage(file=image_path)
+            absolute_image_path = os.path.abspath(image_path)
+            if not absolute_image_path.startswith(base_dir):
+                raise ValueError(f"Unauthorized file path detected: {absolute_image_path}")
+            if os.path.exists(absolute_image_path):
+                return PhotoImage(file=absolute_image_path)
             else:
-                raise ValueError(f"Image path {image_path} does not exist!")
+                raise ValueError(f"Image path {absolute_image_path} does not exist!")
         else:
             raise ValueError(f"Image ID {image_id} not recognized!")
 
