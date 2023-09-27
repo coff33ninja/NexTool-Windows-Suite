@@ -18,6 +18,7 @@ import win32con
 import win32com.client
 import zipfile
 import ctypes
+import win32service
 
 app = ThemedTk(theme="breeze-dark")
 app.title("NexTool Windows Suite")
@@ -31,9 +32,8 @@ def is_admin():
             os.path.join(os.environ["SystemRoot"], "system32", "config", "system"), "r"
         ):
             return True
-    except:
+    except PermissionError:
         return False
-
 
 def print_to_terminal(msg):
     terminal.insert(tk.END, f"{msg}\n")
@@ -67,16 +67,6 @@ def download_file(url, destination):
         urllib.request.urlretrieve(url, destination, reporthook=download_progress)
     except Exception as e:
         print_to_terminal(f"Error downloading {url} to {destination}: {e}")
-
-
-def msg_box(message, title, type=0):
-    # Depending on 'type', you can show different kinds of message boxes.
-    # I'm assuming type=4 is for 'Yes/No' based on your code.
-    # Adjust this as needed.
-    if type == 4:
-        return messagebox.askyesno(title, message)
-    # Add more conditions if you have other types.
-
 
 def extract_zip(zip_path, destination_folder):
     """
@@ -202,8 +192,9 @@ def run_speed_test():
             bufsize=1,
             universal_newlines=True,
         ) as proc:
-            for line in proc.stdout:
-                print_to_terminal(line.strip())
+            if proc.stdout:  # Check if stdout is not None
+                for line in proc.stdout:
+                    print_to_terminal(line.strip())
         proc.wait()
     except Exception as e:
         print_to_terminal(f"Error occurred: {e}")
@@ -470,68 +461,47 @@ def disable_windows_defender():
     os.system("cls")
     print_to_terminal("DISABLING WINDOWS DEFENDER...")
 
-    try:
-        # Disable real-time monitoring
-        cmd_list = [
-            "Powershell",
-            "-ExecutionPolicy",
-            "Bypass",
-            "Set-MpPreference",
-            "-DisableRealtimeMonitoring",
-            "$true",
-        ]
-        with subprocess.Popen(cmd_list, stdout=subprocess.PIPE, text=True) as proc:
-            for line in proc.stdout:
-                print_to_terminal(line.strip())
+    cmd_list_base = [
+        "Powershell",
+        "-ExecutionPolicy",
+        "Bypass",
+    ]
 
-        # Disable behavior monitoring
-        cmd_list[4] = "-DisableBehaviorMonitoring"
-        with subprocess.Popen(cmd_list, stdout=subprocess.PIPE, text=True) as proc:
-            for line in proc.stdout:
-                print_to_terminal(line.strip())
+    # List of commands to run
+    cmd_options = [
+        "Set-MpPreference -DisableRealtimeMonitoring $true",
+        "Set-MpPreference -DisableBehaviorMonitoring $true",
+        "Set-MpPreference -DisableOnAccessProtection $true",
+        "Set-MpPreference -DisableIOAVProtection $true",
+        "Set-MpPreference -DisableIntrusionPreventionSystem $true",
+        "Set-MpPreference -DisablePrivacyMode $true",
+    ]
 
-        # Disable on-access scanning
-        cmd_list[4] = "-DisableOnAccessProtection"
-        with subprocess.Popen(cmd_list, stdout=subprocess.PIPE, text=True) as proc:
-            for line in proc.stdout:
-                print_to_terminal(line.strip())
+    for option in cmd_options:
+        try:
+            cmd_list = cmd_list_base + [option]
+            with subprocess.Popen(cmd_list, stdout=subprocess.PIPE, text=True) as proc:
+                if proc.stdout:  # Check if stdout is not None
+                    for line in proc.stdout:
+                        print_to_terminal(line.strip())
+        except Exception as e:
+            print_to_terminal(f"Error occurred: {e}")
 
-        # Disable cloud-based protection
-        cmd_list[4] = "-DisableIOAVProtection"
-        with subprocess.Popen(cmd_list, stdout=subprocess.PIPE, text=True) as proc:
-            for line in proc.stdout:
-                print_to_terminal(line.strip())
+    # Disable Tamper Protection
+    disable_tamper_protection()
 
-        # Disable intrusion prevention system
-        cmd_list[4] = "-DisableIntrusionPreventionSystem"
-        with subprocess.Popen(cmd_list, stdout=subprocess.PIPE, text=True) as proc:
-            for line in proc.stdout:
-                print_to_terminal(line.strip())
+    # Download and run Defender_Tools.exe
+    base_dir = "C:\\NexTool\\Configuration\\SECURITY"
+    if not os.path.exists(base_dir):
+        os.makedirs(base_dir)
+    exe_destination = os.path.join(base_dir, "Defender_Tools.exe")
+    download_file(
+        "https://raw.githubusercontent.com/coff33ninja/AIO/main/TOOLS/2.COMPUTER_CONFIGURATION/Defender_Tools.exe",
+        exe_destination,
+    )
+    subprocess.run([exe_destination], check=True)
 
-        # Disable automatic sample submission
-        cmd_list[4] = "-DisablePrivacyMode"
-        with subprocess.Popen(cmd_list, stdout=subprocess.PIPE, text=True) as proc:
-            for line in proc.stdout:
-                print_to_terminal(line.strip())
-
-        # Call the function to disable Tamper Protection
-        disable_tamper_protection()
-
-        # Download and run Defender_Tools.exe
-        base_dir = "C:\\NexTool\\Configuration\\SECURITY"
-        if not os.path.exists(base_dir):
-            os.makedirs(base_dir)
-        exe_destination = os.path.join(base_dir, "Defender_Tools.exe")
-        download_file(
-            "https://raw.githubusercontent.com/coff33ninja/AIO/main/TOOLS/2.COMPUTER_CONFIGURATION/Defender_Tools.exe",
-            exe_destination,
-        )
-        subprocess.run([exe_destination], check=True)
-
-        print_to_terminal("WINDOWS DEFENDER DISABLED SUCCESSFULLY.")
-    except Exception as e:
-        print_to_terminal(f"Error occurred: {e}")
-
+    print_to_terminal("WINDOWS DEFENDER DISABLED SUCCESSFULLY.")
 
 def disable_tamper_protection():
     print_to_terminal("ATTEMPTING TO DISABLE TAMPER PROTECTION...")
@@ -589,7 +559,7 @@ def run_TELEMETRY():
         command = [
             "reg",
             "add",
-            "HKLM\SOFTWARE\Policies\Microsoft\Windows\DataCollection",
+            r"HKLM\SOFTWARE\Policies\Microsoft\Windows\DataCollection",  # Note the 'r' prefix
             "/v",
             "AllowTelemetry",
             "/t",
@@ -601,7 +571,7 @@ def run_TELEMETRY():
         subprocess.run(command, check=True)
 
         # Download and run the PowerShell telemetry blocker
-        base_dir = "C:\\NexTool\\Configuration\\TELEMETRY"
+        base_dir = r"C:\NexTool\Configuration\TELEMETRY"  # Note the 'r' prefix
         if not os.path.exists(base_dir):
             os.makedirs(base_dir)
 
@@ -641,7 +611,6 @@ def run_TELEMETRY():
         print_to_terminal(f"Error occurred during command execution:\n{e.stderr}")
     except Exception as e:
         print_to_terminal(f"Error occurred: {e}")
-
 
 def run_MAS():
     print_to_terminal("Executing Microsoft Activation Script...")
@@ -686,15 +655,17 @@ def start_windows_update():
 
 def pause_windows_update():
     # Check if we have elevated permissions
-    if not win32api.IsUserAnAdmin():
+    if not is_admin():
         # If not, re-run the script with elevated permissions
         subprocess.run(["pythonw", __file__, "--elevated"], shell=True)
         return
 
     # Disable and stop the Windows Update service
     try:
-        win32serviceutil.StopService("wuauserv")
-        win32serviceutil.ChangeStartType("wuauserv", win32serviceutil.SERVICE_DISABLED)
+        scm = win32service.OpenSCManager(None, None, win32service.SC_MANAGER_ALL_ACCESS)
+        handle = win32service.OpenService(scm, "wuauserv", win32service.SERVICE_ALL_ACCESS)
+        win32service.StopService(handle)  # type: ignore
+        win32service.ChangeServiceConfig(handle, win32service.SERVICE_NO_CHANGE, win32service.SERVICE_DISABLED, win32service.SERVICE_NO_CHANGE, None, None, False, None, None, None, None)
     except Exception as e:
         print(f"Error stopping or disabling Windows Update service: {e}")
 
@@ -872,7 +843,7 @@ def install_choco_packages():
             log_file.write(f"- {package}\n")
 
     print(f"Installation complete. A log file has been saved to: {log_file_path}")
-    inform_about_choco_gui
+    inform_about_choco_gui()
 
 
 def is_chocolatey_installed():
