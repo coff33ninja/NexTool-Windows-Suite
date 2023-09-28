@@ -122,8 +122,30 @@ echo %CURL_VERSION%
 
 echo Packagemanagers are up to date!
 
-pause
 rem ---- End of Install/Update section ----
+
+rem ---- Start of Python Setup section ----
+
+rem Checking if Python is installed
+python --version >NUL 2>&1
+IF %ERRORLEVEL% NEQ 0 (
+   echo Python is not detected, attempting installation...
+
+   rem Trying to install Python using winget
+   winget install python --exact >NUL 2>&1
+   IF %ERRORLEVEL% NEQ 0 (
+      echo Winget method failed. Trying Chocolatey...
+      choco install python -y
+   )
+)
+
+rem Ensure pip is updated
+python -m pip install --upgrade pip
+
+rem Install Python packages
+python -m pip install tk ttkthemes psutil wmi urllib3 pywin32 pypiwin32 ctypes zipfile
+
+rem ---- End of Python Setup section ----
 
 cls
 python NexTool.py
