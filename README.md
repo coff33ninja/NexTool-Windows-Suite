@@ -42,7 +42,29 @@ Achieve optimal performance by managing Windows services:
 - 🔒 Security Audit Tool: Detect vulnerabilities and get security recommendations.
 
 ## Setup Instructions
-# TODO:
+
+### Prerequisites
+
+1. PowerShell with elevated privileges (Run as Administrator).
+2. Active internet connection to download required packages and tools.
+3. Ensure execution policies allow the script to run. You can set this with: `Set-ExecutionPolicy RemoteSigned`.
+
+### Installation Steps
+
+1. Download the provided PowerShell script (`NexTool-Setup.ps1`).
+2. Right-click on the downloaded file and choose "Run with PowerShell".
+3. The script will automatically handle the setup:
+   - It checks and installs Chocolatey if not present.
+   - Installs or updates essential tools like `aria2`, `wget`, `curl`, and `powershell-core`.
+   - Ensures Python is installed and sets up required Python packages.
+   - Downloads and sets up Winget if not present.
+   - Downloads the NexTool Python script and prepares it for execution.
+
+4. After the script execution completes, it will launch the `NexTool.py` Python script.
+
+**Note**: The script creates temporary directories (`C:\NexTool` & `C:\PS`) during its operation, which will be cleared out once the setup is complete.
+
+For issues during installation, refer to the "Feedback & Issues" section and report any problems you encounter.
 
 ## TODO & Progress
 
