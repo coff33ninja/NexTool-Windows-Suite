@@ -78,42 +78,125 @@ try {
 }
 catch {
     Write-Output 'Winget is not detected, attempting multiple methods of installation...'
+    Write-Output 'Attempting to download NexTool.py from GitHub...'
 
-    # Method 1: Install using latest release link with PowerShell
-    try {
-        Invoke-WebRequest -Uri 'https://github.com/microsoft/winget-cli/releases/latest/download/Microsoft.DesktopAppInstaller_8wekyb3d8bbwe.msixbundle' -OutFile 'C:\PS\WinGet.ps1.msixbundle'
-        Add-AppxPackage 'C:\PS\WinGet.ps1.msixbundle'
-    }
-    catch {
-        # Method 2: Using curl
+    $downloaded = $false
+
+    foreach ($url in $downloadURLs) {
         try {
-            Invoke-WebRequest -L -o C:\PS\WinGet.curl.msixbundle 'https://github.com/microsoft/winget-cli/releases/latest/download/Microsoft.DesktopAppInstaller_8wekyb3d8bbwe.msixbundle'
-            Add-AppxPackage 'C:\PS\WinGet.curl.msixbundle'
+            wget $url -O $destination  # <-- Changed $downloadURL to $url
+            Write-Output 'Downloaded using wget.'
+            $downloaded = $true
+            break
         }
         catch {
-            # Method 3: Using aria2c
             try {
-                aria2c 'https://github.com/microsoft/winget-cli/releases/latest/download/Microsoft.DesktopAppInstaller_8wekyb3d8bbwe.msixbundle' -d C:\PS -o WinGet.aria2.msixbundle
-                Add-AppxPackage 'C:\PS\WinGet.aria2.msixbundle'
+                curl -L $url -o $destination  # <-- Changed $downloadURL to $url
+                Write-Output 'Downloaded using curl.'
+                $downloaded = $true
+                break
             }
             catch {
-                # Method 4: Using PowerShell Core
-                pwsh -Command "Invoke-WebRequest -Uri 'https://github.com/microsoft/winget-cli/releases/latest/download/Microsoft.DesktopAppInstaller_8wekyb3d8bbwe.msixbundle' -OutFile 'C:\PS\WinGet.pwsh1.msixbundle'"
-                Add-AppxPackage 'C:\PS\WinGet.pwsh1.msixbundle'
+                try {
+                    aria2c $url -d 'C:\NexTool' -o 'NexTool.py'  # <-- Changed $downloadURL to $url
+                    Write-Output 'Downloaded using aria2c.'
+                    $downloaded = $true
+                    break
+                }
+                catch {
+                    try {
+                        Invoke-WebRequest -Uri $url -OutFile $destination  # <-- Changed $downloadURL to $url
+                        Write-Output "Downloaded using default PowerShell's Invoke-WebRequest."
+                        $downloaded = $true
+                        break
+                    }
+                    catch {
+                        try {
+                            pwsh -Command "Invoke-WebRequest -Uri '$url' -OutFile '$destination'"  # <-- Changed $downloadURL to $url
+                            Write-Output "Downloaded using PowerShell Core's Invoke-WebRequest."
+                            $downloaded = $true
+                            break
+                        }
+                        catch {
+                            continue
+                        }
+                    }
+                }
             }
         }
     }
 
-    # Cleanup .msixbundle files
-    Remove-Item 'C:\PS\*.msixbundle' -Force
+    if (-not $downloaded) {
+        Write-Output 'Failed to download NexTool.py from all URLs.'
+        exit
+    }
+}
+# Display specific installed Chocolatey packages
+Clear-Host
+Write-Output 'Listing Specific Installed Chocolatey Packages...'
+
+# Check Chocolatey version
+try {
+    $chocoVersion = choco --version
+    Write-Output "Chocolatey version: $chocoVersion"
+}
+catch {
+    Write-Output 'Chocolatey is not installed.'
 }
 
-# Display installed Chocolatey packages
-Clear-Host
-Write-Output 'Listing Installed Chocolatey Packages...'
-$chocoPackages = choco list --local-only
-$chocoPackages | ForEach-Object { Write-Output $_ }
-$wingetVersion = winget --version
+# Check Python version
+try {
+    $pythonVersion = python --version 2>&1
+    Write-Output "$pythonVersion"
+}
+catch {
+    Write-Output 'Python is not installed.'
+}
+
+# Check wget version
+try {
+    $wgetVersion = wget --version | Select-Object -First 1
+    Write-Output $wgetVersion
+}
+catch {
+    Write-Output 'wget is not installed.'
+}
+
+# Check curl version
+try {
+    $curlVersion = curl --version | Select-Object -First 1
+    Write-Output $curlVersion
+}
+catch {
+    Write-Output 'curl is not installed.'
+}
+
+# Check aria2 version
+try {
+    $aria2Version = aria2c --version | Select-Object -First 1
+    Write-Output $aria2Version
+}
+catch {
+    Write-Output 'aria2 is not installed.'
+}
+
+# Check powershell-core version
+try {
+    $pwshVersion = pwsh --version
+    Write-Output $pwshVersion
+}
+catch {
+    Write-Output 'powershell-core is not installed.'
+}
+
+# Display winget version
+try {
+    $wingetVersion = winget --version
+    Write-Output "Winget version: $wingetVersion"
+}
+catch {
+    Write-Output 'Winget is not detected.'
+}
 
 # Attempt to download NexTool.py using multiple methods
 $downloadURLs = @(
