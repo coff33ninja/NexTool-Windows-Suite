@@ -84,14 +84,14 @@ catch {
 
     foreach ($url in $downloadURLs) {
         try {
-            wget $url -O $destination  # <-- Changed $downloadURL to $url
+            cmd /c wget $url -O $destination  # <-- Changed $downloadURL to $url
             Write-Output 'Downloaded using wget.'
             $downloaded = $true
             break
         }
         catch {
             try {
-                curl -L $url -o $destination  # <-- Changed $downloadURL to $url
+                cmd /c curl -L $url -o $destination  # <-- Changed $downloadURL to $url
                 Write-Output 'Downloaded using curl.'
                 $downloaded = $true
                 break
@@ -155,7 +155,7 @@ catch {
 
 # Check wget version
 try {
-    $wgetVersion = wget --version | Select-Object -First 1
+    $wgetVersion = cmd /c wget -h | Select-Object -First 1
     Write-Output $wgetVersion
 }
 catch {
@@ -164,7 +164,7 @@ catch {
 
 # Check curl version
 try {
-    $curlVersion = curl --version | Select-Object -First 1
+    $curlVersion = cmd /c curl --version | Select-Object -First 1
     Write-Output $curlVersion
 }
 catch {
@@ -212,14 +212,14 @@ $downloaded = $false
 
 foreach ($url in $downloadURLs) {
     try {
-        Invoke-WebRequest $url -O $destination  # Use $url not $downloadURLs
+        cmd /c wget $url -O $destination  # Use $url not $downloadURLs
         Write-Output 'Downloaded using wget.'
         $downloaded = $true
         break
     }
     catch {
         try {
-            Invoke-WebRequest -L $url -o $destination  # Use $url not $downloadURLs
+            cmd /c curl -L $url -o $destination  # Use $url not $downloadURLs
             Write-Output 'Downloaded using curl.'
             $downloaded = $true
             break
