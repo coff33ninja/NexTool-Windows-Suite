@@ -1,97 +1,185 @@
-# Ensure script is running as administrator
-$IsAdmin = ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] 'Administrator')
-if (-not $IsAdmin) {
-    # Relaunch script with admin rights
-    Start-Process powershell -ArgumentList "-NoProfile -ExecutionPolicy Bypass -File `"$PSCommandPath`"" -Verb RunAs
-    exit
+# Initialization
+$batchPath = $MyInvocation.MyCommand.Definition
+$batchName = [System.IO.Path]::GetFileNameWithoutExtension($batchPath)
+
+# Ensure directories exist and set permissions
+$directories = @('C:\NexTool', 'C:\PS')
+foreach ($dir in $directories) {
+    if (-not (Test-Path $dir)) {
+        New-Item -Path $dir -ItemType Directory | Out-Null
+        icacls $dir /grant 'Everyone:F'
+    }
 }
 
-# Define directories
-$NexToolDir = 'C:\NexTool'
-$PSDir = 'C:\PS'
-
-# Create directories if they don't exist and set permissions
-if (-not (Test-Path $NexToolDir)) {
-    New-Item -Path $NexToolDir -ItemType Directory | Out-Null
-    Invoke-Command icacls $NexToolDir /grant 'Everyone:F'
+# Check Chocolatey
+try {
+    $chocoVersion = choco --version
+    Write-Output "Chocolatey version: $chocoVersion"
 }
-
-if (-not (Test-Path $PSDir)) {
-    New-Item -Path $PSDir -ItemType Directory | Out-Null
-    Invoke-Command icacls $PSDir /grant 'Everyone:F'
-}
-
-# Ensure Chocolatey is installed or updated
-if (-not (Get-Command choco -ErrorAction SilentlyContinue)) {
+catch {
+    Write-Output 'Chocolatey not detected, attempting installation...'
     Invoke-Expression ((New-Object System.Net.WebClient).DownloadString('https://chocolatey.org/install.ps1'))
-    $env:PATH += ";$env:ALLUSERSPROFILE\chocolatey\bin"
+    $env:Path += ";$env:ALLUSERSPROFILE\chocolatey\bin"
 }
 
-# Install or update necessary packages with Chocolatey
-@('choco', 'aria2', 'wget', 'curl', 'powershell-core') | ForEach-Object {
-    if (Get-Command $_ -ErrorAction SilentlyContinue) {
-        choco upgrade $_ -y
+# Check and install tools using Chocolatey
+$tools = @('aria2', 'wget', 'curl', 'powershell-core')
+foreach ($tool in $tools) {
+    try {
+        $version = & $tool --version
+        Write-Output "$tool version: $version"
+    }
+    catch {
+        Write-Output "$tool not detected, installing..."
+        choco install $tool -y
+    }
+}
+
+# Check and install/upgrade PowerShell Core
+try {
+    $pwshVersion = pwsh --version
+    Write-Output "powershell-core version: $pwshVersion"
+    choco upgrade powershell-core -y
+}
+catch {
+    Write-Output 'powershell-core not detected, installing...'
+    choco install powershell-core -y
+}
+
+# Check and install Python
+try {
+    $pythonVersion = python --version 2>&1
+    Write-Output "$pythonVersion"
+}
+catch {
+    Write-Output 'Python is not detected, attempting installation...'
+    $winver = (Get-CimInstance Win32_OperatingSystem).Version.Split('.')[0]
+
+    if ($winver -eq '10' -or $winver -eq '11') {
+        winget install python --exact 2>&1 | Out-Null
     }
     else {
-        choco install $_ -y
+        Write-Output 'This system is not Windows 10 or 11. Using Chocolatey to install Python...'
+        choco install python -y
     }
 }
 
-# Check if winget is installed
-if (-not (Get-Command winget -ErrorAction SilentlyContinue)) {
-    Write-Output 'Winget is not detected, attempting installation...'
-    $wingetURL = 'https://github.com/microsoft/winget-cli/releases/latest/download/Microsoft.DesktopAppInstaller_8wekyb3d8bbwe.msixbundle'
-    $downloadPath = Join-Path $PSDir 'WinGet.ps1.msixbundle'
+# Update pip and install Python packages
+$pythonPackages = @('tk', 'ttkthemes', 'psutil', 'wmi', 'urllib3', 'pywin32', 'pypiwin32')
+pip install --upgrade pip
+foreach ($package in $pythonPackages) {
+    pip install $package
+}
 
-    # Use various methods to download
+# Check and install Winget
+try {
+    $wingetVersion = winget --version
+    Write-Output "Winget version: $wingetVersion"
+}
+catch {
+    Write-Output 'Winget is not detected, attempting multiple methods of installation...'
+
+    # Method 1: Install using latest release link with PowerShell
     try {
-        Invoke-WebRequest -Uri $wingetURL -OutFile $downloadPath
+        Invoke-WebRequest -Uri 'https://github.com/microsoft/winget-cli/releases/latest/download/Microsoft.DesktopAppInstaller_8wekyb3d8bbwe.msixbundle' -OutFile 'C:\PS\WinGet.ps1.msixbundle'
+        Add-AppxPackage 'C:\PS\WinGet.ps1.msixbundle'
+    }
+    catch {
+        # Method 2: Using curl
+        try {
+            Invoke-WebRequest -L -o C:\PS\WinGet.curl.msixbundle 'https://github.com/microsoft/winget-cli/releases/latest/download/Microsoft.DesktopAppInstaller_8wekyb3d8bbwe.msixbundle'
+            Add-AppxPackage 'C:\PS\WinGet.curl.msixbundle'
+        }
+        catch {
+            # Method 3: Using aria2c
+            try {
+                aria2c 'https://github.com/microsoft/winget-cli/releases/latest/download/Microsoft.DesktopAppInstaller_8wekyb3d8bbwe.msixbundle' -d C:\PS -o WinGet.aria2.msixbundle
+                Add-AppxPackage 'C:\PS\WinGet.aria2.msixbundle'
+            }
+            catch {
+                # Method 4: Using PowerShell Core
+                pwsh -Command "Invoke-WebRequest -Uri 'https://github.com/microsoft/winget-cli/releases/latest/download/Microsoft.DesktopAppInstaller_8wekyb3d8bbwe.msixbundle' -OutFile 'C:\PS\WinGet.pwsh1.msixbundle'"
+                Add-AppxPackage 'C:\PS\WinGet.pwsh1.msixbundle'
+            }
+        }
+    }
+
+    # Cleanup .msixbundle files
+    Remove-Item 'C:\PS\*.msixbundle' -Force
+}
+
+# Display installed Chocolatey packages
+Clear-Host
+Write-Output 'Listing Installed Chocolatey Packages...'
+$chocoPackages = choco list --local-only
+$chocoPackages | ForEach-Object { Write-Output $_ }
+$wingetVersion = winget --version
+
+# Attempt to download NexTool.py using multiple methods
+$downloadURLs = @(
+    'https://github.com/coff33ninja/NexTool-Windows-Suite/blob/23efbe6160e74b5c6b149493fbded3ef33ee53fb/NexTool.py',
+    'https://raw.githubusercontent.com/coff33ninja/NexTool-Windows-Suite/master/NexTool.py'
+)
+
+$destination = 'C:\NexTool\NexTool.py'
+
+Write-Output 'Attempting to download NexTool.py from GitHub...'
+
+$downloaded = $false
+
+foreach ($url in $downloadURLs) {
+    try {
+        Invoke-WebRequest $url -O $destination  # Use $url not $downloadURLs
+        Write-Output 'Downloaded using wget.'
+        $downloaded = $true
+        break
     }
     catch {
         try {
-            & pwsh -Command "Invoke-WebRequest -Uri '$wingetURL' -OutFile '$downloadPath'"
+            Invoke-WebRequest -L $url -o $destination  # Use $url not $downloadURLs
+            Write-Output 'Downloaded using curl.'
+            $downloaded = $true
+            break
         }
         catch {
             try {
-                & aria2c $wingetURL -d $PSDir -o 'WinGet.aria2.msixbundle'
+                aria2c $url -d 'C:\NexTool' -o 'NexTool.py'  # Use $url not $downloadURLs
+                Write-Output 'Downloaded using aria2c.'
+                $downloaded = $true
+                break
             }
             catch {
-                & Invoke-WebRequest -L -o (Join-Path $PSDir 'WinGet.curl.msixbundle') $wingetURL
+                try {
+                    Invoke-WebRequest -Uri $url -OutFile $destination  # Use $url not $downloadURLs
+                    Write-Output "Downloaded using default PowerShell's Invoke-WebRequest."
+                    $downloaded = $true
+                    break
+                }
+                catch {
+                    try {
+                        pwsh -Command "Invoke-WebRequest -Uri '$url' -OutFile '$destination'"  # Use $url not $downloadURLs
+                        Write-Output "Downloaded using PowerShell Core's Invoke-WebRequest."
+                        $downloaded = $true
+                        break
+                    }
+                    catch {
+                        continue
+                    }
+                }
             }
         }
     }
-
-    # Attempt to install
-    Get-ChildItem "$PSDir\WinGet.*.msixbundle" | ForEach-Object {
-        Add-AppxPackage $_.FullName
-    }
-
-    # Cleanup
-    Remove-Item "$PSDir\*.msixbundle" -Force
-
-    # Verify installation
-    if (-not (Get-Command winget -ErrorAction SilentlyContinue)) {
-        Write-Output "Please manually install 'App Installer' from the Microsoft Store."
-        Start-Process 'https://apps.microsoft.com/store/detail/app-installer/9NBLGGH4NNS1'
-        exit
-    }
 }
 
-# Print versions of installed software
-Write-Output ('Winget version: ' + (winget --version))
-Write-Output ('Chocolatey version: ' + (choco --version))
-Write-Output ('Aria2 version: ' + (aria2c --version | Select-String 'aria2 version'))
-Write-Output ('Wget version: ' + (Invoke-WebRequest --version | Select-String 'GNU Wget'))
-Write-Output ('Curl version: ' + (Invoke-WebRequest --version | Select-String 'curl'))
+if (-not $downloaded) {
+    Write-Output 'Failed to download NexTool.py from all URLs.'
+    exit
+}
 
-Write-Output 'Packagemanagers are up to date!'
-Pause
-
-# Execute Python script
+# Launch Python NexTool.py
 & python "$PSScriptRoot\NexTool.py"
 
-# Cleanup directories
-Remove-Item $NexToolDir -Recurse -Force
-Remove-Item $PSDir -Recurse -Force
-
-Pause
+# Cleanup
+Write-Output 'Clearing out C:\NexTool and C:\PS...'
+Remove-Item 'C:\NexTool' -Recurse -Force
+Remove-Item 'C:\PS' -Recurse -Force
