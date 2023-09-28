@@ -51,20 +51,36 @@ Achieve optimal performance by managing Windows services:
 
 ### Installation Steps
 
-1. Download the provided PowerShell script (`NexTool-Setup.ps1`).
-2. Right-click on the downloaded file and choose "Run with PowerShell".
-3. The script will automatically handle the setup:
+1. There are multiple ways to execute the setup script:
+
+   a. **Directly from the Web**:
+   
+      Execute the following command in an elevated PowerShell window:
+      
+      ```powershell
+      iex (new-object net.webclient).DownloadString('https://raw.githubusercontent.com/coff33ninja/NexTool-Windows-Suite/master/AdminLaunchOption.ps1')
+      ```
+
+   b. **Local Execution**:
+   
+      - Download the provided PowerShell script (`NexTool-Setup.ps1`).
+      - Right-click on the downloaded file and choose "Run with PowerShell".
+
+2. The script will automatically handle the setup:
    - It checks and installs Chocolatey if not present.
    - Installs or updates essential tools like `aria2`, `wget`, `curl`, and `powershell-core`.
    - Ensures Python is installed and sets up required Python packages.
    - Downloads and sets up Winget if not present.
    - Downloads the NexTool Python script and prepares it for execution.
 
-4. After the script execution completes, it will launch the `NexTool.py` Python script.
+3. After the script execution completes, it will launch the `NexTool.py` Python script.
 
 **Note**: The script creates temporary directories (`C:\NexTool` & `C:\PS`) during its operation, which will be cleared out once the setup is complete.
 
+For users who prefer an executable, a `PS2EXE` version of the script is available in the [Releases](https://github.com/coff33ninja/NexTool-Windows-Suite/releases) section of our GitHub repository.
+
 For issues during installation, refer to the "Feedback & Issues" section and report any problems you encounter.
+
 
 ## TODO & Progress
 
