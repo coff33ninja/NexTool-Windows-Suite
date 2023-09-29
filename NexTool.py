@@ -91,6 +91,56 @@ def extract_zip(zip_path, destination_folder):
 def msg_box(message, title, style):
     return ctypes.windll.user32.MessageBoxW(0, message, title, style)
 
+def run_winget_check(action_type):
+    # Check if winget is available
+    if not os.path.exists('C:\\temp\\winget-available.txt'):
+        # Message to guide user
+        msg = ("Winget is not detected on this machine. Please follow the instructions below:\n\n"
+               "Method 1: Install winget via Microsoft Store\n"
+               "1. Open the Microsoft Store app.\n"
+               "2. Search for 'winget' and select the App Installer application.\n"
+               "3. Click Get to install.\n\n"
+               "Alternatively, you can [Click Here](https://aka.ms/winget-install) to directly open the Microsoft Store page for Winget.\n\n"
+               "Method 2: Install winget via GitHub\n"
+               "1. Navigate to the [Winget GitHub page](https://github.com/microsoft/winget-cli/releases).\n"
+               "2. Download the latest .msixbundle file and install.\n\n"
+               "After installation, please re-run this tool.")
+
+        info_window = tk.Toplevel(app)
+        info_window.title("Winget Installation Guide")
+
+        text_widget = tk.Text(info_window, wrap=tk.WORD, height=20, width=60)
+        text_widget.pack(padx=20, pady=20)
+
+        # Make links clickable
+        text_widget.insert(tk.END, msg)
+        text_widget.tag_configure("hyper", foreground="blue", underline=True)
+        text_widget.tag_bind("hyper", "<Enter>", lambda e: text_widget.config(cursor="hand2"))
+        text_widget.tag_bind("hyper", "<Leave>", lambda e: text_widget.config(cursor="arrow"))
+
+        # Open Microsoft Store link
+        start_link = msg.find("[Click Here]")
+        end_link = start_link + len("[Click Here]")
+        text_widget.tag_add("hyper", f"1.{start_link}", f"1.{end_link}")
+        text_widget.tag_bind("hyper", "<Button-1>", lambda e: webbrowser.open("https://aka.ms/winget-install"))
+
+        # Open GitHub link
+        start_link_gh = msg.find("[Winget GitHub page]")
+        end_link_gh = start_link_gh + len("[Winget GitHub page]")
+        text_widget.tag_add("hyper", f"1.{start_link_gh}", f"1.{end_link_gh}")
+        text_widget.tag_bind("hyper", "<Button-1>", lambda e: webbrowser.open("https://github.com/microsoft/winget-cli/releases"))
+
+        text_widget.config(state=tk.DISABLED)  # Make the text widget read-only
+    else:
+        terminal.insert(tk.END, "Winget is available!\n")
+        terminal.see(tk.END)  # Auto-scroll to the end
+
+        if action_type == "gui":
+            # Specific functionality for Winget GUI
+            run_winget_gui()
+        elif action_type == "pre_set_selections":
+            # Specific functionality for Winget Pre-Set Selections
+            install_winget_packages()
 
 def run_quick_info():
     os.system("cls")
@@ -1250,9 +1300,9 @@ def button_action(sub_item):
         "PatchMyPC GUI": run_patchmypc_own_selections,
         "Chocolatey Pre-Set Selections": install_choco_packages,
         "Chocolatey GUI": run_chocolatey_gui,
-        "Winget Pre-Set Selections": install_winget_packages,
-        "Winget GUI": run_winget_gui,
-        "Driver Updater": run_driver_updater,
+        "Winget Pre-Set Selections": lambda: run_winget_check("pre_set_selections"),
+        "Winget GUI": lambda: run_winget_check("gui"),
+        "Driver Updater": run_winget_check,
         "Office Installations": download_and_setup_office,
     }
     print(f"Button Action Called for: {sub_item}")  # Debug print
