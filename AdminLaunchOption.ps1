@@ -335,7 +335,7 @@ function Get-NexTool {
 Get-NexTool
 
 # Launch Python NexTool.py
-& python "$PSScriptRoot\NexTool.py"
+& python 'C:\NexTool\NexTool.py'
 
 # Cleanup
 Write-Output 'Clearing out C:\NexTool and C:\PS...'
