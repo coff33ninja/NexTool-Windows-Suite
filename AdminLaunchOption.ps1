@@ -1,6 +1,5 @@
 # Path for our flag/temporary file
 $flagFilePath = 'C:\temp\script_ran.txt'
-$exitFilePath = 'C:\temp\exit.txt'
 
 if (-not (Test-Path $flagFilePath)) {
     # Set the execution policies
@@ -14,20 +13,6 @@ if (-not (Test-Path $flagFilePath)) {
 
     # Restart the shell and rerun the script
     Start-Process powershell -ArgumentList '-File', $PSCommandPath -Wait
-
-    # Check for the exit.txt after the restarted shell closes
-    if (Test-Path $exitFilePath) {
-        # Delete the exit.txt file
-        Remove-Item -Path $exitFilePath -Force
-
-        Clear-Host
-
-        # Exit the current session after the restarted shell has been closed
-        Write-Host 'INFORMATION:' -ForegroundColor Green -NoNewline
-        Write-Host ' If the script does not close on its own you may close it manually' -ForegroundColor Yellow -BackgroundColor DarkBlue
-        Start-Sleep -Seconds 5  # Pauses the script for 5 seconds
-        exit
-    }
 }
 Clear-Host
 
@@ -307,8 +292,9 @@ catch {
 function Get-NexTool {
     param (
         [string[]]$downloadURLs = @(
-            'https://github.com/coff33ninja/NexTool-Windows-Suite/blob/23efbe6160e74b5c6b149493fbded3ef33ee53fb/NexTool.py',
-            'https://raw.githubusercontent.com/coff33ninja/NexTool-Windows-Suite/master/NexTool.py'
+            'https://raw.githubusercontent.com/coff33ninja/NexTool-Windows-Suite/master/NexTool.py',
+            'https://raw.githubusercontent.com/coff33ninja/NexTool-Windows-Suite/main/NexTool.py',
+            'https://github.com/coff33ninja/NexTool-Windows-Suite/blob/main/AdminLaunchOption.ps1'
         ),
         [string]$destination = 'C:\NexTool\NexTool.py'
     )
@@ -359,7 +345,3 @@ Remove-Item 'C:\PS' -Recurse -Force
 # Now, reset the execution policies at the end of the script and cleanup
 Set-ExecutionPolicy -ExecutionPolicy Default -Force
 Set-ExecutionPolicy -ExecutionPolicy Default -Scope Process -Force
-Remove-Item $flagFilePath
-New-Item -Path $exitFilePath -ItemType File -Force
-
-exit
