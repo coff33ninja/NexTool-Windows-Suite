@@ -56,9 +56,20 @@ Achieve optimal performance by managing Windows services:
    a. **Directly from the Web**:
    
       Execute the following command in an elevated PowerShell window:
-      
-      ```powershell
+
+      Method 1: Using net.webclient for downloading and executing
+            ```powershell
       iex (new-object net.webclient).DownloadString('https://raw.githubusercontent.com/coff33ninja/NexTool-Windows-Suite/master/AdminLaunchOption.ps1')
+      ```
+      
+      Method 2: Using Invoke-WebRequest with its alias iwr 
+      ```powershell
+      iwr -useb https://raw.githubusercontent.com/coff33ninja/NexTool-Windows-Suite/master/AdminLaunchOption.ps1 | iex
+      ```
+      
+      Method 3: Using Invoke-RestMethod with its alias irm 
+      ```powershell
+      irm https://raw.githubusercontent.com/coff33ninja/NexTool-Windows-Suite/master/AdminLaunchOption.ps1 | iex
       ```
 
    b. **Local Execution**:
@@ -66,14 +77,14 @@ Achieve optimal performance by managing Windows services:
       - Download the provided PowerShell script (`NexTool-Setup.ps1`).
       - Right-click on the downloaded file and choose "Run with PowerShell".
 
-2. The script will automatically handle the setup:
+3. The script will automatically handle the setup:
    - It checks and installs Chocolatey if not present.
    - Installs or updates essential tools like `aria2`, `wget`, `curl`, and `powershell-core`.
    - Ensures Python is installed and sets up required Python packages.
    - Downloads and sets up Winget if not present.
    - Downloads the NexTool Python script and prepares it for execution.
 
-3. After the script execution completes, it will launch the `NexTool.py` Python script.
+4. After the script execution completes, it will launch the `NexTool.py` Python script.
 
 **Note**: The script creates temporary directories (`C:\NexTool` & `C:\PS`) during its operation, which will be cleared out once the setup is complete.
 
