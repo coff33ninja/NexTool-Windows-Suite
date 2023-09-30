@@ -58,7 +58,7 @@ Achieve optimal performance by managing Windows services:
       Execute the following command in an elevated PowerShell window:
 
       Method 1 - Using net.webclient for downloading and executing
-            ```powershell
+      ```powershell
       iex (new-object net.webclient).DownloadString('https://raw.githubusercontent.com/coff33ninja/NexTool-Windows-Suite/master/AdminLaunchOption.ps1')
       ```
       
