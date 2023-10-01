@@ -19,6 +19,8 @@ import win32com.client
 import zipfile
 import ctypes
 import win32service
+import winreg as reg
+import json
 
 app = ThemedTk(theme="breeze-dark")
 app.title("NexTool Windows Suite")
@@ -814,8 +816,6 @@ def install_choco_packages():
 
     packages = [
         "googlechrome",
-        "git",
-        "adobeair",
         "adobeshockwaveplayer",
         "javaruntime",
         "netfx-repair-tool",
@@ -1274,6 +1274,111 @@ def create_office_config(architecture, destination):
     with open(destination, "w") as xml_file:
         xml_file.write(xml_content)
 
+# Services, Startup and Tasks Manager
+RECOMMENDED_DISABLE = [
+    "bits", "BDESVC", "BcastDVRUserService_7c360", "GoogleChromeElevationService",
+    "gupdate", "gupdatem", "vmickvpexchange", "vmicguestinterface", "vmicshutdown"
+]
+
+def list_all_services():
+    command = ["sc", "query", "type=", "service"]
+    output = subprocess.check_output(command, text=True).splitlines()
+    services = [line.split(":")[1].strip() for line in output if "SERVICE_NAME" in line]
+    return services
+
+def backup_services():
+    services = list_all_services()
+    service_status = {}
+    for service in services:
+        status_cmd = ["sc", "qc", service]
+        status_output = subprocess.check_output(status_cmd, text=True).splitlines()
+        status = [line.split(":", 1)[1].strip() for line in status_output if "START_TYPE" in line][0]
+        service_status[service] = status
+
+    with open("backup_services.json", "w") as file:
+        json.dump(service_status, file)
+
+def restore_services():
+    with open("backup_services.json", "r") as file:
+        backup_statuses = json.load(file)
+
+    for service, status in backup_statuses.items():
+        set_service_start_type(service, status)
+
+def get_service_start_type(service):
+    status_cmd = ["sc", "qc", service]
+    status_output = subprocess.check_output(status_cmd, text=True).splitlines()
+    status = [line.split(":", 1)[1].strip() for line in status_output if "START_TYPE" in line]
+    return status[0] if status else None
+
+def set_service_start_type(service, start_type):
+    subprocess.run(["sc", "config", service, f"start= {start_type}"], text=True)
+
+def control_service(service, action):
+    if action in ["start", "stop", "pause", "continue"]:
+        result = subprocess.run(["sc", action, service], capture_output=True, text=True)
+    elif action in ["auto", "demand", "disabled"]:
+        result = subprocess.run(["sc", "config", service, f"start= {action}"], capture_output=True, text=True)
+    else:
+        return f"Invalid action: {action}"
+
+    output = result.stdout + result.stderr
+    if "Access is denied" in output:
+        return f"Cannot control '{service}' due to system restrictions."
+    elif "Pending" in output:
+        return f"Changes to '{service}' will take effect after system restart."
+    elif "FAILED" in output:
+        return f"Failed to perform action '{action}' on '{service}'."
+    else:
+        return f"Successfully performed action '{action}' on '{service}'."
+
+def disable_recommended_services():
+    results = []
+    for service in RECOMMENDED_DISABLE:
+        result = control_service(service, "disabled")
+        results.append(result)
+    return results
+
+def disable_selected_services(service_list):
+    results = []
+    for service in service_list:
+        result = control_service(service, "disabled")
+        results.append(result)
+    return results
+
+def list_startup_applications():
+    key_path = r"Software\Microsoft\Windows\CurrentVersion\Run"
+    startup_apps = {}
+    with reg.OpenKey(reg.HKEY_CURRENT_USER, key_path, 0, reg.KEY_READ) as key:
+        index = 0
+        while True:
+            try:
+                name, value, _ = reg.EnumValue(key, index)
+                startup_apps[name] = value
+                index += 1
+            except WindowsError:
+                break
+    return startup_apps
+
+def add_startup_application(name, path):
+    key_path = r"Software\Microsoft\Windows\CurrentVersion\Run"
+    with reg.OpenKey(reg.HKEY_CURRENT_USER, key_path, 0, reg.KEY_SET_VALUE) as key:
+        reg.SetValueEx(key, name, 0, reg.REG_SZ, path)
+
+def remove_startup_application(name):
+    key_path = r"Software\Microsoft\Windows\CurrentVersion\Run"
+    with reg.OpenKey(reg.HKEY_CURRENT_USER, key_path, 0, reg.KEY_SET_VALUE) as key:
+        reg.DeleteValue(key, name)
+
+def list_scheduled_tasks():
+    tasks = subprocess.check_output(["schtasks", "/query", "/fo", "LIST"]).decode()
+    return tasks
+
+def create_scheduled_task(name, command, time="12:00", frequency="daily"):
+    subprocess.run(["schtasks", "/create", "/sc", frequency, "/tn", name, "/tr", command, "/st", time])
+
+def delete_scheduled_task(name):
+    subprocess.run(["schtasks", "/delete", "/tn", name, "/f"])
 
 def button_action(sub_item):
     function_mapping = {
@@ -1304,6 +1409,9 @@ def button_action(sub_item):
         "Winget GUI": lambda: run_winget_check("gui"),
         "Driver Updater": run_winget_check,
         "Office Installations": download_and_setup_office,
+        "Services Management": popup_services_management,
+        "Startup Applications": popup_startup_apps,
+        "Scheduled Tasks": popup_scheduled_tasks,
     }
     print(f"Button Action Called for: {sub_item}")  # Debug print
     function_to_run = function_mapping.get(sub_item)
@@ -1312,6 +1420,7 @@ def button_action(sub_item):
     else:
         terminal.insert(tk.END, f"Executing action for: {sub_item}\n")
         terminal.see(tk.END)  # Auto-scroll to the end
+
 
 
 # Function to display the main menu
@@ -1381,6 +1490,46 @@ def show_sub_sub_menu(main_item, sub_category):
     )
     back_button.grid(row=len(sub_sub_items), column=0, sticky="ew", padx=10, pady=10)
 
+# Service Management Features
+def popup_services_management():
+    window = tk.Toplevel(app)
+    window.title("Services Management")
+
+    services_listbox = tk.Listbox(window)
+    services_listbox.grid(row=0, column=0, pady=10, padx=10, rowspan=4)
+
+    for service in list_all_services():
+        services_listbox.insert(tk.END, service)
+
+    ttk.Button(window, text="Start", command=lambda: control_service(services_listbox.get(tk.ACTIVE), "start")).grid(row=1, column=1)
+    ttk.Button(window, text="Stop", command=lambda: control_service(services_listbox.get(tk.ACTIVE), "stop")).grid(row=2, column=1)
+    ttk.Button(window, text="Disable", command=lambda: control_service(services_listbox.get(tk.ACTIVE), "disabled")).grid(row=3, column=1)
+
+# Startup Applications Features
+def popup_startup_apps():
+    window = tk.Toplevel(app)
+    window.title("Startup Applications")
+
+    startup_apps_listbox = tk.Listbox(window)
+    startup_apps_listbox.grid(row=0, column=0, pady=10, padx=10, rowspan=2)
+
+    for app_name, app_path in list_startup_applications().items():
+        startup_apps_listbox.insert(tk.END, f"{app_name}: {app_path}")
+
+    ttk.Button(window, text="Add", command=add_startup_application_dialog).grid(row=0, column=1)
+    ttk.Button(window, text="Remove", command=lambda: remove_startup_application(startup_apps_listbox.get(tk.ACTIVE).split(":")[0])).grid(row=1, column=1)
+
+# Scheduled Tasks Features
+def popup_scheduled_tasks():
+    window = tk.Toplevel(app)
+    window.title("Scheduled Tasks")
+
+    scheduled_tasks_text = scrolledtext.ScrolledText(window, width=40, height=5)
+    scheduled_tasks_text.grid(row=0, column=0, pady=10, padx=10, rowspan=2)
+    scheduled_tasks_text.insert(tk.END, list_scheduled_tasks())
+
+    ttk.Button(window, text="Create", command=create_scheduled_task_dialog).grid(row=0, column=1)
+    ttk.Button(window, text="Delete", command=delete_scheduled_task_dialog).grid(row=1, column=1)
 
 class ToolTip:
     def __init__(self, widget, text="Widget Info"):
@@ -1571,7 +1720,9 @@ tabs = {
         "Group Policy Reset",
         "WMI Reset",
         "Disable Specific Services",
-        "Services Manager",
+        "Services Management",
+        "Startup Applications",
+        "Scheduled Tasks",
     ],
     "Extras": [],
     "Shutdown Options": [
