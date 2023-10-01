@@ -1,7 +1,25 @@
+$baseTranscriptLog = 'C:\temp\transcript_log'
+$errorLog = 'C:\temp\error_log.txt'
+
+if (Test-Path "${baseTranscriptLog}_2.txt") {
+    Remove-Item "${baseTranscriptLog}_2.txt"
+}
+
+if (Test-Path "${baseTranscriptLog}_1.txt") {
+    Rename-Item "${baseTranscriptLog}_1.txt" "${baseTranscriptLog}_2.txt"
+}
+
+if (Test-Path "${baseTranscriptLog}.txt") {
+    Rename-Item "${baseTranscriptLog}.txt" "${baseTranscriptLog}_1.txt"
+}
+
+Start-Transcript -Path "${baseTranscriptLog}.txt"
+
 # Path for our flag/temporary file
 $flagFilePath = 'C:\temp\script_ran.txt'
 
 if (-not (Test-Path $flagFilePath)) {
+    Start-Transcript -Path "${baseTranscriptLog}.txt" -Append
     # Set the execution policies
     Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Force
     Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope Process -Force
@@ -13,6 +31,8 @@ if (-not (Test-Path $flagFilePath)) {
 
     # Restart the shell and rerun the script
     Start-Process powershell -ArgumentList '-File', $PSCommandPath -Wait
+    exit
+
 }
 Clear-Host
 
@@ -66,6 +86,7 @@ catch {
     }
     catch {
         Write-Output 'Failed to install Chocolatey. Exiting...'
+        "$_" | Out-File $errorLog -Append
         exit
     }
 }
@@ -78,6 +99,7 @@ try {
 }
 catch {
     Write-Output 'Aria2 not detected, installing...'
+    "$_" | Out-File $errorLog -Append
     choco install aria2 -y
 }
 
@@ -89,6 +111,7 @@ try {
 }
 catch {
     Write-Output 'Wget not detected, installing...'
+    "$_" | Out-File $errorLog -Append
     choco install wget -y
 }
 
@@ -100,6 +123,7 @@ try {
 }
 catch {
     Write-Output 'Curl not detected, installing...'
+    "$_" | Out-File $errorLog -Append
     choco install curl -y
 }
 
@@ -107,10 +131,12 @@ catch {
 try {
     $pwshVersion = pwsh --version
     Write-Output "powershell-core version: $pwshVersion"
+    "$_" | Out-File $errorLog -Append
     choco upgrade powershell-core -y
 }
 catch {
     Write-Output 'powershell-core not detected, installing...'
+    "$_" | Out-File $errorLog -Append
     choco install powershell-core -y
 }
 
@@ -122,12 +148,13 @@ try {
 catch {
     Write-Output 'Python is not detected, attempting installation...'
     $winver = (Get-CimInstance Win32_OperatingSystem).Version.Split('.')[0]
-
+    "$_" | Out-File $errorLog -Append
     if ($winver -eq '10' -or $winver -eq '11') {
         winget install python --exact 2>&1 | Out-Null
     }
     else {
         Write-Output 'This system is not Windows 10 or 11. Using Chocolatey to install Python...'
+        "$_" | Out-File $errorLog -Append
         choco install python -y
     }
 }
@@ -141,6 +168,24 @@ $pythonPackages = @('tk', 'ttkthemes', 'psutil', 'wmi', 'urllib3', 'pywin32', 'p
 pip install --upgrade pip
 foreach ($package in $pythonPackages) {
     pip install $package
+    pip3 install $package
+}
+
+# Function to check Winget Compatibility
+function IsWingetCompatible {
+    $osInfo = Get-CimInstance Win32_OperatingSystem
+    $major = $osInfo.Version.Split('.')[0]
+    $build = $osInfo.BuildNumber
+
+    # Check for Windows 10 with build 19041 or later
+    if ($major -eq '10' -and $build -ge 19041) {
+        return $true
+    }
+    # Check for Windows 11
+    elseif ($major -eq '11') {
+        return $true
+    }
+    return $false
 }
 
 # Check and install Winget
@@ -153,32 +198,43 @@ function Get-Winget {
     try {
         $wingetVersion = winget --version
         Write-Output "Winget version: $wingetVersion"
-        # Attempt to write the version to a text file without the `-Path` parameter
         $wingetVersion | Out-File 'C:\temp\winget-available.txt' -Force
         return $true
     }
     catch {
-        # If an error occurred, attempt writing to the file using the `-Path` parameter
+        # If error occurred, attempt writing to the file
         try {
             $wingetVersion | Out-File -Path 'C:\temp\winget-available.txt' -Force
         }
         catch {
-            # If both attempts fail, then output an error
             Write-Output "Error occurred: $_"
             Write-Output 'Winget is not detected, attempting installation...'
+            "$_" | Out-File $errorLog -Append
+
         }
     }
-    # Check Windows version
-    $winver = (Get-CimInstance Win32_OperatingSystem).Version.Split('.')[0]
-    if ($winver -eq '10' -or $winver -eq '11') {
-        $userChoice = Read-Host 'Would you like to install the winget package manager manually from the Microsoft Store? (Y/N)'
-        if ($userChoice -eq 'Y') {
-            Start-Process 'https://aka.ms/winget-install'
-            Write-Output 'Please install winget from the Microsoft Store and then re-run this script.'
+
+    # User confirmation to install manually from the store
+    $userChoice = Read-Host 'Would you like to install the winget package manager manually from the Microsoft Store? (Y/N)'
+    if ($userChoice -eq 'Y') {
+        Start-Process 'https://apps.microsoft.com/store/detail/app-installer/9NBLGGH4NNS1'
+        Start-Process 'ms-windows-store://pdp/?PFN=Microsoft.DesktopAppInstaller_8wekyb3d8bbwe'
+
+        Read-Host 'Press ENTER after you have attempted the manual installation of winget.'
+
+        # Check winget version again
+        try {
+            $wingetVersion = winget --version
+            Write-Output "Successfully detected Winget version: $wingetVersion"
+        }
+        catch {
+            Write-Output "Still unable to detect winget. Please ensure it's installed and available in the system path."
+            "$_" | Out-File $errorLog -Append
             exit
         }
     }
 
+    # Download methods for winget
     $downloadMethods = @(
         { Invoke-WebRequest -Uri $wingetDownloadURL -OutFile $destination },
         { cmd /c wget $wingetDownloadURL -O $destination },
@@ -187,6 +243,7 @@ function Get-Winget {
         { pwsh -Command "Invoke-WebRequest -Uri '$wingetDownloadURL' -OutFile '$destination'" }
     )
 
+    # Try downloading using available methods
     $downloaded = $false
     foreach ($method in $downloadMethods) {
         try {
@@ -200,17 +257,10 @@ function Get-Winget {
     }
 
     if ($downloaded) {
-        try {
-            Add-AppxPackage $destination
-            $wingetVersion = winget --version
-            Write-Output "Successfully installed Winget version: $wingetVersion"
-            return $true
-        }
-        catch {
-            Write-Output "Failed to install winget. Please try manually or ensure 'App Installer' is available from the Microsoft Store."
-            Start-Process 'https://apps.microsoft.com/store/detail/app-installer/9NBLGGH4NNS1'
-            exit
-        }
+        Add-AppxPackage $destination
+        $wingetVersion = winget --version
+        Write-Output "Successfully installed Winget version: $wingetVersion"
+        return $true
     }
     else {
         Write-Output 'Failed to download winget using all methods.'
@@ -218,76 +268,91 @@ function Get-Winget {
     }
 }
 
-# Call Winget Installation
-Get-Winget
+# Call functions based on compatibility
+if (IsWingetCompatible) {
+    Get-Winget
+}
+else {
+    Write-Output 'Your Windows version is not compatible with winget. It is only available on newer versions of Windows 10 or 11.'
+    Write-Output 'Consider updating to a newer version or use the Chocolatey package manager as an alternative.'
+}
 
 # Display specific installed Chocolatey packages
 Clear-Host
 Write-Output 'Listing Specific Installed Chocolatey Packages...'
+function Get-ChocolateyInstalledPackage {
+    # Check Chocolatey version
+    try {
+        $chocoVersion = choco --version
+        Write-Output "Chocolatey version: $chocoVersion"
+    }
+    catch {
+        Write-Output 'Chocolatey is not installed.'
+        "$_" | Out-File $errorLog -Append
 
-# Check Chocolatey version
-try {
-    $chocoVersion = choco --version
-    Write-Output "Chocolatey version: $chocoVersion"
-}
-catch {
-    Write-Output 'Chocolatey is not installed.'
-}
+    }
 
-# Check Python version
-try {
-    $pythonVersion = python --version 2>&1
-    Write-Output "$pythonVersion"
-}
-catch {
-    Write-Output 'Python is not installed.'
-}
+    # Check Python version
+    try {
+        $pythonVersion = python --version 2>&1
+        Write-Output "$pythonVersion"
+    }
+    catch {
+        Write-Output 'Python is not installed.'
+        "$_" | Out-File $errorLog -Append
 
-# Check wget version
-try {
-    $wgetVersion = cmd /c wget -h | Select-Object -First 1
-    Write-Output $wgetVersion
-}
-catch {
-    Write-Output 'wget is not installed.'
-}
+    }
 
-# Check curl version
-try {
-    $curlVersion = cmd /c curl --version | Select-Object -First 1
-    Write-Output $curlVersion
-}
-catch {
-    Write-Output 'curl is not installed.'
-}
+    # Check wget version
+    try {
+        $wgetVersion = cmd /c wget -h | Select-Object -First 1
+        Write-Output $wgetVersion
+    }
+    catch {
+        Write-Output 'wget is not installed.'
+        "$_" | Out-File $errorLog -Append
+    }
 
-# Check aria2 version
-try {
-    $aria2Version = aria2c --version | Select-Object -First 1
-    Write-Output $aria2Version
-}
-catch {
-    Write-Output 'aria2 is not installed.'
-}
+    # Check curl version
+    try {
+        $curlVersion = cmd /c curl --version | Select-Object -First 1
+        Write-Output $curlVersion
+    }
+    catch {
+        Write-Output 'curl is not installed.'
+        "$_" | Out-File $errorLog -Append
+    }
 
-# Check powershell-core version
-try {
-    $pwshVersion = pwsh --version
-    Write-Output $pwshVersion
-}
-catch {
-    Write-Output 'powershell-core is not installed.'
-}
+    # Check aria2 version
+    try {
+        $aria2Version = aria2c --version | Select-Object -First 1
+        Write-Output $aria2Version
+    }
+    catch {
+        Write-Output 'aria2 is not installed.'
+        "$_" | Out-File $errorLog -Append
+    }
 
-# Display winget version
-try {
-    $wingetVersion = winget --version
-    Write-Output "Winget version: $wingetVersion"
-}
-catch {
-    Write-Output 'Winget is not detected.'
-}
+    # Check powershell-core version
+    try {
+        $pwshVersion = pwsh --version
+        Write-Output $pwshVersion
+    }
+    catch {
+        Write-Output 'powershell-core is not installed.'
+        "$_" | Out-File $errorLog -Append
+    }
 
+    # Display winget version
+    try {
+        $wingetVersion = winget --version
+        Write-Output "Winget version: $wingetVersion"
+    }
+    catch {
+        Write-Output 'Winget is not detected.'
+        "$_" | Out-File $errorLog -Append
+    }
+}
 # Attempt to download NexTool.py using multiple methods
 function Get-NexTool {
     param (
@@ -345,3 +410,5 @@ Remove-Item 'C:\PS' -Recurse -Force
 # Now, reset the execution policies at the end of the script and cleanup
 Set-ExecutionPolicy -ExecutionPolicy Default -Force
 Set-ExecutionPolicy -ExecutionPolicy Default -Scope Process -Force
+Stop-Transcript
+exit
