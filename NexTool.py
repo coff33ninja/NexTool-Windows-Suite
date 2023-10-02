@@ -1409,9 +1409,6 @@ def button_action(sub_item):
         "Winget GUI": lambda: run_winget_check("gui"),
         "Driver Updater": run_winget_check,
         "Office Installations": download_and_setup_office,
-        "Services Management": popup_services_management,
-        "Startup Applications": popup_startup_apps,
-        "Scheduled Tasks": popup_scheduled_tasks,
     }
     print(f"Button Action Called for: {sub_item}")  # Debug print
     function_to_run = function_mapping.get(sub_item)
@@ -1420,8 +1417,6 @@ def button_action(sub_item):
     else:
         terminal.insert(tk.END, f"Executing action for: {sub_item}\n")
         terminal.see(tk.END)  # Auto-scroll to the end
-
-
 
 # Function to display the main menu
 def show_main_menu():
@@ -1489,47 +1484,6 @@ def show_sub_sub_menu(main_item, sub_category):
         command=lambda: show_sub_menu(main_item),
     )
     back_button.grid(row=len(sub_sub_items), column=0, sticky="ew", padx=10, pady=10)
-
-# Service Management Features
-def popup_services_management():
-    window = tk.Toplevel(app)
-    window.title("Services Management")
-
-    services_listbox = tk.Listbox(window)
-    services_listbox.grid(row=0, column=0, pady=10, padx=10, rowspan=4)
-
-    for service in list_all_services():
-        services_listbox.insert(tk.END, service)
-
-    ttk.Button(window, text="Start", command=lambda: control_service(services_listbox.get(tk.ACTIVE), "start")).grid(row=1, column=1)
-    ttk.Button(window, text="Stop", command=lambda: control_service(services_listbox.get(tk.ACTIVE), "stop")).grid(row=2, column=1)
-    ttk.Button(window, text="Disable", command=lambda: control_service(services_listbox.get(tk.ACTIVE), "disabled")).grid(row=3, column=1)
-
-# Startup Applications Features
-def popup_startup_apps():
-    window = tk.Toplevel(app)
-    window.title("Startup Applications")
-
-    startup_apps_listbox = tk.Listbox(window)
-    startup_apps_listbox.grid(row=0, column=0, pady=10, padx=10, rowspan=2)
-
-    for app_name, app_path in list_startup_applications().items():
-        startup_apps_listbox.insert(tk.END, f"{app_name}: {app_path}")
-
-    ttk.Button(window, text="Add", command=add_startup_application_dialog).grid(row=0, column=1)
-    ttk.Button(window, text="Remove", command=lambda: remove_startup_application(startup_apps_listbox.get(tk.ACTIVE).split(":")[0])).grid(row=1, column=1)
-
-# Scheduled Tasks Features
-def popup_scheduled_tasks():
-    window = tk.Toplevel(app)
-    window.title("Scheduled Tasks")
-
-    scheduled_tasks_text = scrolledtext.ScrolledText(window, width=40, height=5)
-    scheduled_tasks_text.grid(row=0, column=0, pady=10, padx=10, rowspan=2)
-    scheduled_tasks_text.insert(tk.END, list_scheduled_tasks())
-
-    ttk.Button(window, text="Create", command=create_scheduled_task_dialog).grid(row=0, column=1)
-    ttk.Button(window, text="Delete", command=delete_scheduled_task_dialog).grid(row=1, column=1)
 
 class ToolTip:
     def __init__(self, widget, text="Widget Info"):
