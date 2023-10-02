@@ -16,6 +16,7 @@ class MBR2GPTConverter(QWidget):
 
         self.disk_combo = QComboBox()
         layout.addWidget(self.disk_combo)
+
         self.refresh_button = QPushButton("Refresh Disk List")
         self.refresh_button.clicked.connect(self.populate_disk_list)
         layout.addWidget(self.refresh_button)
