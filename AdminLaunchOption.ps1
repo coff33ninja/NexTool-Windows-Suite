@@ -142,23 +142,16 @@ catch {
 
 # Check and install Python
 try {
-    $pythonVersion = python --version 2>&1
-    Write-Output "$pythonVersion"
+    $pwshVersion = pwsh --version
+    Write-Output "python version: $pwshVersion"
+    "$_" | Out-File $errorLog -Append
+    choco upgrade python -y
 }
 catch {
-    Write-Output 'Python is not detected, attempting installation...'
-    $winver = (Get-CimInstance Win32_OperatingSystem).Version.Split('.')[0]
+    Write-Output 'python not detected, installing...'
     "$_" | Out-File $errorLog -Append
-    if ($winver -eq '10' -or $winver -eq '11') {
-        winget install python --exact 2>&1 | Out-Null
-    }
-    else {
-        Write-Output 'This system is not Windows 10 or 11. Using Chocolatey to install Python...'
-        "$_" | Out-File $errorLog -Append
-        choco install python -y
-    }
+    choco install python -y
 }
-
 # Enviroment Temporary reset after Aria2, Curl, Wget, Powershell-Core and Python installations...
 $env:Path = [System.Environment]::GetEnvironmentVariable('Path', 'Machine') + ';' + [System.Environment]::GetEnvironmentVariable('Path', 'User')
 # This will be changed if certain specific issues occure on diffrent windows versions that does not support this method
