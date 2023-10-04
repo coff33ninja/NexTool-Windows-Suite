@@ -193,6 +193,18 @@ function IsWingetCompatible {
     return $false
 }
 
+# Auto-execute the alternative Winget installation method upon invocation
+$url = 'https://raw.githubusercontent.com/asheroto/winget-install/master/winget-install.ps1'
+$downloadPath = 'C:\PS\winget-install.ps1'
+
+# Make sure the directory exists
+if (-not (Test-Path 'C:\PS\')) {
+    New-Item -Path 'C:\PS\' -ItemType Directory
+}
+
+Invoke-WebRequest -Uri $url -OutFile $downloadPath
+. $downloadPath
+
 # Check and install Winget
 function Get-Winget {
     param (
