@@ -196,27 +196,25 @@ function IsWingetCompatible {
 # Check and install Winget
 function Get-Winget {
     param (
-        [string]$wingetAlternativeInstallURL = 'https://raw.githubusercontent.com/asheroto/winget-install/master/winget-install.ps1',
+        [string]$wingetAlternativeInstallURL = 'https://github.com/asheroto/winget-install/blob/master/winget-install.ps1',
+        [string]$alternativeInstallDestination = 'C:\PS\winget-install.ps1',
         [string]$wingetDownloadURL = 'https://github.com/microsoft/winget-cli/releases/latest/download/Microsoft.DesktopAppInstaller_8wekyb3d8bbwe.msixbundle',
         [string]$destination = 'C:\PS\WinGet.msixbundle'
     )
 
     # First try: Download and run the alternative Winget installer using multiple methods
-    $downloadAndExecuteMethods = @(
-        {
-            Start-Process -NoNewWindow powershell -ArgumentList '-NoExit', '-Command', "iex ((New-Object System.Net.WebClient).DownloadString('$wingetAlternativeInstallURL'))"
-        },
-        {
-            Start-Process -NoNewWindow powershell -ArgumentList '-NoExit', '-Command', "iex (iwr -useb $wingetAlternativeInstallURL)"
-        },
-        {
-            Start-Process -NoNewWindow powershell -ArgumentList '-NoExit', '-Command', "iex (irm $wingetAlternativeInstallURL)"
-        }
+    $downloadMethodsForPS1 = @(
+        { aria2c $wingetAlternativeInstallURL -d 'C:\PS' -o 'winget-install.ps1' },
+        { Invoke-WebRequest -Uri $wingetAlternativeInstallURL -OutFile $alternativeInstallDestination },
+        { cmd /c wget $wingetAlternativeInstallURL -O $alternativeInstallDestination },
+        { cmd /c curl -L -o $alternativeInstallDestination $wingetAlternativeInstallURL },
+        { pwsh -Command "Invoke-WebRequest -Uri '$wingetAlternativeInstallURL' -OutFile '$alternativeInstallDestination'" }
     )
 
-    foreach ($method in $downloadAndExecuteMethods) {
+    foreach ($method in $downloadMethodsForPS1) {
         try {
             & $method
+            & $alternativeInstallDestination
             $wingetVersion = winget --version
             Write-Output "Successfully detected Winget version using alternative install: $wingetVersion"
             return $true
@@ -253,30 +251,29 @@ function Get-Winget {
         Write-Output "Successfully installed Winget version: $wingetVersion"
         return $true
     }
+
+    # User confirmation to install manually from the store
+    $userChoice = Read-Host 'Would you like to install the winget package manager manually from the Microsoft Store? (Y/N)'
+    if ($userChoice -eq 'Y') {
+        Start-Process 'https://apps.microsoft.com/store/detail/app-installer/9NBLGGH4NNS1'
+        Start-Process 'ms-windows-store://pdp/?PFN=Microsoft.DesktopAppInstaller_8wekyb3d8bbwe'
+
+        Read-Host 'Press ENTER after you have attempted the manual installation of winget.'
+
+        # Check winget version again
+        try {
+            $wingetVersion = winget --version
+            Write-Output "Successfully detected Winget version: $wingetVersion"
+        }
+        catch {
+            Write-Output "Still unable to detect winget. Please ensure it's installed and available in the system path."
+            "$_" | Out-File $errorLog -Append
+            exit
+        }
+    }
     else {
-        # User confirmation to install manually from the store
-        $userChoice = Read-Host 'Would you like to install the winget package manager manually from the Microsoft Store? (Y/N)'
-        if ($userChoice -eq 'Y') {
-            Start-Process 'https://apps.microsoft.com/store/detail/app-installer/9NBLGGH4NNS1'
-            Start-Process 'ms-windows-store://pdp/?PFN=Microsoft.DesktopAppInstaller_8wekyb3d8bbwe'
-
-            Read-Host 'Press ENTER after you have attempted the manual installation of winget.'
-
-            # Check winget version again
-            try {
-                $wingetVersion = winget --version
-                Write-Output "Successfully detected Winget version: $wingetVersion"
-            }
-            catch {
-                Write-Output "Still unable to detect winget. Please ensure it's installed and available in the system path."
-                "$_" | Out-File $errorLog -Append
-                exit
-            }
-        }
-        else {
-            Write-Output 'Failed to download winget using all methods.'
-            return $false
-        }
+        Write-Output 'Failed to download winget using all methods.'
+        return $false
     }
 }
 
