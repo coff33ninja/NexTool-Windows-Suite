@@ -196,60 +196,27 @@ function IsWingetCompatible {
 # Check and install Winget
 function Get-Winget {
     param (
-        [string]$wingetAlternativeInstallURL = 'https://github.com/asheroto/winget-install/blob/master/winget-install.ps1',
-        [string]$alternativeInstallDestination = 'C:\PS\winget-install.ps1',
         [string]$wingetDownloadURL = 'https://github.com/microsoft/winget-cli/releases/latest/download/Microsoft.DesktopAppInstaller_8wekyb3d8bbwe.msixbundle',
         [string]$destination = 'C:\PS\WinGet.msixbundle'
     )
 
-    # First try: Download and run the alternative Winget installer using multiple methods
-    $downloadMethodsForPS1 = @(
-        { aria2c $wingetAlternativeInstallURL -d 'C:\PS' -o 'winget-install.ps1' },
-        { Invoke-WebRequest -Uri $wingetAlternativeInstallURL -OutFile $alternativeInstallDestination },
-        { cmd /c wget $wingetAlternativeInstallURL -O $alternativeInstallDestination },
-        { cmd /c curl -L -o $alternativeInstallDestination $wingetAlternativeInstallURL },
-        { pwsh -Command "Invoke-WebRequest -Uri '$wingetAlternativeInstallURL' -OutFile '$alternativeInstallDestination'" }
-    )
-
-    foreach ($method in $downloadMethodsForPS1) {
-        try {
-            & $method
-            & $alternativeInstallDestination
-            $wingetVersion = winget --version
-            Write-Output "Successfully detected Winget version using alternative install: $wingetVersion"
-            return $true
-        }
-        catch {
-            Write-Output "Attempt to install using current method failed. Error: $_"
-        }
-    }
-
-    # Download methods for winget .msixbundle
-    $downloadMethodsForMsix = @(
-        { Invoke-WebRequest -Uri $wingetDownloadURL -OutFile $destination },
-        { cmd /c wget $wingetDownloadURL -O $destination },
-        { aria2c $wingetDownloadURL -d 'C:\PS' -o 'WinGet.msixbundle' },
-        { cmd /c curl -L -o $destination $wingetDownloadURL },
-        { pwsh -Command "Invoke-WebRequest -Uri '$wingetDownloadURL' -OutFile '$destination'" }
-    )
-
-    $downloaded = $false
-    foreach ($method in $downloadMethodsForMsix) {
-        try {
-            & $method
-            $downloaded = $true
-            break
-        }
-        catch {
-            continue
-        }
-    }
-
-    if ($downloaded) {
-        Add-AppxPackage $destination
+    try {
         $wingetVersion = winget --version
-        Write-Output "Successfully installed Winget version: $wingetVersion"
+        Write-Output "Winget version: $wingetVersion"
+        $wingetVersion | Out-File 'C:\temp\winget-available.txt' -Force
         return $true
+    }
+    catch {
+        # If error occurred, attempt writing to the file
+        try {
+            $wingetVersion | Out-File -Path 'C:\temp\winget-available.txt' -Force
+        }
+        catch {
+            Write-Output "Error occurred: $_"
+            Write-Output 'Winget is not detected, attempting installation...'
+            "$_" | Out-File $errorLog -Append
+
+        }
     }
 
     # User confirmation to install manually from the store
@@ -270,6 +237,35 @@ function Get-Winget {
             "$_" | Out-File $errorLog -Append
             exit
         }
+    }
+
+    # Download methods for winget
+    $downloadMethods = @(
+        { Invoke-WebRequest -Uri $wingetDownloadURL -OutFile $destination },
+        { cmd /c wget $wingetDownloadURL -O $destination },
+        { aria2c $wingetDownloadURL -d 'C:\PS' -o 'WinGet.msixbundle' },
+        { cmd /c curl -L -o $destination $wingetDownloadURL },
+        { pwsh -Command "Invoke-WebRequest -Uri '$wingetDownloadURL' -OutFile '$destination'" }
+    )
+
+    # Try downloading using available methods
+    $downloaded = $false
+    foreach ($method in $downloadMethods) {
+        try {
+            & $method
+            $downloaded = $true
+            break
+        }
+        catch {
+            continue
+        }
+    }
+
+    if ($downloaded) {
+        Add-AppxPackage $destination
+        $wingetVersion = winget --version
+        Write-Output "Successfully installed Winget version: $wingetVersion"
+        return $true
     }
     else {
         Write-Output 'Failed to download winget using all methods.'
