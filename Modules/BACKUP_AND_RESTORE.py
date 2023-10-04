@@ -11,7 +11,9 @@ from PyQt5.QtWidgets import (QApplication, QMainWindow, QPushButton, QVBoxLayout
 from PyQt5.QtCore import Qt
 from PyQt5.QtCore import pyqtSignal
 from datetime import datetime
-# pip install PyQt5 pyqt5-tools
+# python3.11 -m pip install PyQt5 comtypes pyqt5-tools
+# pip3.11 install PyQt5 comtypes pyqt5-tools
+# C:\Python311\Scripts\pip.exe install PyQt5 comtypes pyqt5-tools
 
 
 def is_admin():
@@ -31,7 +33,7 @@ def ensure_admin_rights():
     # If after elevation attempt we're still not admin
     if not is_admin():
         QMessageBox.critical(
-            None, "Error", "Administrator permissions are required to run this operation.") # type: ignore
+            None, "Error", "Administrator permissions are required to run this operation.")  # type: ignore
         sys.exit(1)  # Exit the application with an error code
 
 
@@ -46,6 +48,7 @@ class BackupApp(QMainWindow):
     showWarningBoxSignal = pyqtSignal(str, str)
     updateSignal = pyqtSignal()
     progressUpdateSignal = pyqtSignal(int)
+
     def __init__(self):
         super().__init__()
         self.operationCompletedSignal.connect(self.on_operation_success)
@@ -81,7 +84,8 @@ class BackupApp(QMainWindow):
         self.splitter.addWidget(self.restore_widget)
 
         # Display Backup Location
-        self.backup_location_label = QLabel(f"Backup Location: {self.backup_dir}")
+        self.backup_location_label = QLabel(
+            f"Backup Location: {self.backup_dir}")
         main_layout.addWidget(self.backup_location_label)
 
         # Add splitter to main layout
@@ -133,7 +137,8 @@ class BackupApp(QMainWindow):
         layout.addWidget(self.backup_user_data_button)
 
         # Buttons to Backup Thunderbird
-        self.backup_thunderbird_button = QPushButton("Backup Thunderbird Data", self)
+        self.backup_thunderbird_button = QPushButton(
+            "Backup Thunderbird Data", self)
         self.backup_thunderbird_button.clicked.connect(
             lambda: self.threaded_backup_function(self.backup_thunderbird))
         layout.addWidget(self.backup_thunderbird_button)
@@ -165,11 +170,12 @@ class BackupApp(QMainWindow):
         # Buttons to restore drivers
         self.restore_drivers_button = QPushButton("Restore Drivers", self)
         self.restore_drivers_button.clicked.connect(
-        lambda: self.threaded_restore_function(self.restore_drivers))
+            lambda: self.threaded_restore_function(self.restore_drivers))
         layout.addWidget(self.restore_drivers_button)
 
         # Buttons to Restore Thunderbird Data
-        self.restore_thunderbird_button = QPushButton("Restore Thunderbird Data", self)
+        self.restore_thunderbird_button = QPushButton(
+            "Restore Thunderbird Data", self)
         self.restore_thunderbird_button.clicked.connect(
             lambda: self.threaded_restore_function(self.restore_thunderbird))
         layout.addWidget(self.restore_thunderbird_button)
@@ -252,7 +258,8 @@ class BackupApp(QMainWindow):
                 self.backup_dir = self.get_backup_dir_with_timestamp()
                 QMessageBox.information(
                     self, "Info", f"Backup directory changed to: {self.backup_dir}")
-        self.backup_location_label.setText(f"Backup Location: {self.backup_dir}")
+        self.backup_location_label.setText(
+            f"Backup Location: {self.backup_dir}")
 
     def update_progress(self, progress):
         self.global_progress.setValue(progress)
@@ -270,7 +277,8 @@ class BackupApp(QMainWindow):
             self.global_progress.setValue(100)
             self.showInfoBoxSignal.emit("Info", "WiFi profiles backed up!")
         except Exception as e:
-            self.showErrorBoxSignal.emit("Error", f"Failed to backup WiFi profiles: {e}")
+            self.showErrorBoxSignal.emit(
+                "Error", f"Failed to backup WiFi profiles: {e}")
 
     def restore_wifi(self):
         try:
@@ -298,7 +306,8 @@ class BackupApp(QMainWindow):
             self.global_progress.setValue(100)
             self.showInfoBoxSignal.emit("Info", "IP configurations backed up!")
         except Exception as e:
-            self.showErrorBoxSignal.emit("Error", f"Failed to backup IP configurations: {e}")
+            self.showErrorBoxSignal.emit(
+                "Error", f"Failed to backup IP configurations: {e}")
 
     def restore_ip(self):
         try:
@@ -323,7 +332,8 @@ class BackupApp(QMainWindow):
             self.global_progress.setValue(100)
             self.showInfoBoxSignal.emit("Info", "Drivers backed up!")
         except Exception as e:
-            self.showErrorBoxSignal.emit("Error", f"Failed to backup drivers: {e}")
+            self.showErrorBoxSignal.emit(
+                "Error", f"Failed to backup drivers: {e}")
 
     def restore_drivers(self):
         try:
@@ -346,13 +356,16 @@ class BackupApp(QMainWindow):
                 self.session_backup_dir, "USER_DATA")
             if not os.path.exists(action_backup_dir):
                 os.makedirs(action_backup_dir)
-                total_files = sum([len(files) for _, _, files in os.walk(os.environ["USERPROFILE"])])
+                total_files = sum(
+                    [len(files) for _, _, files in os.walk(os.environ["USERPROFILE"])])
                 files_copied = 0
 
                 user_dirs = ["Desktop", "Documents", "Pictures"]
                 for u_dir in user_dirs:
-                    user_dir_path = os.path.join(os.environ["USERPROFILE"], u_dir)
-                    backup_dir_path = os.path.join(self.backup_dir, "USER_DATA", u_dir)
+                    user_dir_path = os.path.join(
+                        os.environ["USERPROFILE"], u_dir)
+                    backup_dir_path = os.path.join(
+                        self.backup_dir, "USER_DATA", u_dir)
 
                     for item in os.listdir(user_dir_path):
                         source = os.path.join(user_dir_path, item)
@@ -369,12 +382,14 @@ class BackupApp(QMainWindow):
 
             self.showInfoBoxSignal.emit("Info", "User data backed up!")
         except Exception as e:
-            self.showErrorBoxSignal.emit("Error", f"Failed to backup user data: {e}")
+            self.showErrorBoxSignal.emit(
+                "Error", f"Failed to backup user data: {e}")
 
     def restore_user_data(self):
         try:
             # Prompt user to select a backup directory.
-            backup_dir_selected = QFileDialog.getExistingDirectory(self, "Select the directory where your backup resides")
+            backup_dir_selected = QFileDialog.getExistingDirectory(
+                self, "Select the directory where your backup resides")
 #   "Select the directory where your backup resides", self)
             # If the user cancels the directory selection, return.
             if not backup_dir_selected:
@@ -382,27 +397,31 @@ class BackupApp(QMainWindow):
 
             # Check if the selected directory has the required structure (for example, USER_DATA folder).
             if not os.path.exists(os.path.join(backup_dir_selected, "USER_DATA")):
-                self.showErrorBoxSignal.emit("Error", "Selected directory doesn't seem to have a valid backup.")
+                self.showErrorBoxSignal.emit(
+                    "Error", "Selected directory doesn't seem to have a valid backup.")
                 return
 
             self.backup_dir = backup_dir_selected
 
             reply = QMessageBox.question(self, "Restore User Data",
-                "Would you like to restore the profile to its original locations? "
-                "If No, a backup folder will be created at C:\\BACKUP and a shortcut placed on your desktop.",
-                QMessageBox.Yes | QMessageBox.No | QMessageBox.Cancel,
-                QMessageBox.Yes)
+                                         "Would you like to restore the profile to its original locations? "
+                                         "If No, a backup folder will be created at C:\\BACKUP and a shortcut placed on your desktop.",
+                                         QMessageBox.Yes | QMessageBox.No | QMessageBox.Cancel,
+                                         QMessageBox.Yes)
 
             if reply == QMessageBox.Cancel:
                 return
             elif reply == QMessageBox.Yes:
-                total_files = sum([len(files) for _, _, files in os.walk(os.path.join(self.backup_dir, "USER_DATA"))])
+                total_files = sum([len(files) for _, _, files in os.walk(
+                    os.path.join(self.backup_dir, "USER_DATA"))])
                 files_restored = 0
 
                 user_dirs = ["Desktop", "Documents", "Pictures"]
                 for u_dir in user_dirs:
-                    backup_dir_path = os.path.join(self.backup_dir, "USER_DATA", u_dir)
-                    user_dir_path = os.path.join(os.environ["USERPROFILE"], u_dir)
+                    backup_dir_path = os.path.join(
+                        self.backup_dir, "USER_DATA", u_dir)
+                    user_dir_path = os.path.join(
+                        os.environ["USERPROFILE"], u_dir)
 
                     for item in os.listdir(backup_dir_path):
                         source = os.path.join(backup_dir_path, item)
@@ -434,7 +453,7 @@ class BackupApp(QMainWindow):
         try:
             self.global_progress.setValue(0)
             action_backup_dir = os.path.join(
-        self.session_backup_dir, "EMAIL", "Thunderbird")
+                self.session_backup_dir, "EMAIL", "Thunderbird")
             if not os.path.exists(action_backup_dir):
                 os.makedirs(action_backup_dir)
             user_profile = os.environ["USERPROFILE"]
@@ -448,7 +467,8 @@ class BackupApp(QMainWindow):
 
             self.global_progress.setValue(50)
 
-            total_files = sum([len(files) for _, _, files in os.walk(thunderbird_profile)])
+            total_files = sum([len(files)
+                              for _, _, files in os.walk(thunderbird_profile)])
             files_copied = 0
 
             for item in os.listdir(thunderbird_profile):
@@ -461,28 +481,34 @@ class BackupApp(QMainWindow):
 
             self.showInfoBoxSignal.emit("Info", "Thunderbird data backed up!")
         except Exception as e:
-            self.showErrorBoxSignal.emit("Error", f"Failed to backup Thunderbird data: {e}")
+            self.showErrorBoxSignal.emit(
+                "Error", f"Failed to backup Thunderbird data: {e}")
 
     def restore_thunderbird(self):
         try:
             self.global_progress.setValue(0)
 
             # Prompt user to select a backup directory.
-            backup_dir_selected = QFileDialog.getExistingDirectory(self, "Select the directory where your backup resides")
+            backup_dir_selected = QFileDialog.getExistingDirectory(
+                self, "Select the directory where your backup resides")
             if not backup_dir_selected:
                 return
 
             # Check if the selected directory has Thunderbird backup
             if not os.path.exists(os.path.join(backup_dir_selected, "EMAIL", "Thunderbird")):
-                self.showErrorBoxSignal.emit("Error", "Selected directory doesn't seem to have a valid Thunderbird backup.")
+                self.showErrorBoxSignal.emit(
+                    "Error", "Selected directory doesn't seem to have a valid Thunderbird backup.")
                 return
 
             # Define the source and target directories
-            source_dir = os.path.join(backup_dir_selected, "EMAIL", "Thunderbird")
-            target_dir = os.path.join(os.environ["USERPROFILE"], "AppData", "Roaming", "Thunderbird", "Profiles")
+            source_dir = os.path.join(
+                backup_dir_selected, "EMAIL", "Thunderbird")
+            target_dir = os.path.join(
+                os.environ["USERPROFILE"], "AppData", "Roaming", "Thunderbird", "Profiles")
 
             # Perform the restore operation
-            total_files = sum([len(files) for _, _, files in os.walk(source_dir)])
+            total_files = sum([len(files)
+                              for _, _, files in os.walk(source_dir)])
             files_restored = 0
 
             for item in os.listdir(source_dir):
@@ -496,7 +522,6 @@ class BackupApp(QMainWindow):
             self.showInfoBoxSignal.emit("Info", "Thunderbird data restored!")
         except Exception as e:
             self.showErrorBoxSignal.emit("Error", str(e))
-
 
     def backup_outlook(self):
         user_profile = os.environ["USERPROFILE"]
@@ -540,19 +565,22 @@ class BackupApp(QMainWindow):
     def restore_outlook(self):
         try:
             # Prompt user to select a backup directory.
-            backup_dir_selected = QFileDialog.getExistingDirectory(self, "Select the directory where your backup resides")
+            backup_dir_selected = QFileDialog.getExistingDirectory(
+                self, "Select the directory where your backup resides")
             if not backup_dir_selected:
                 return
 
             # Check if the selected directory has Outlook backup
             if not os.path.exists(os.path.join(backup_dir_selected, "EMAIL", "Outlook")):
-                self.showErrorBoxSignal.emit("Error", "Selected directory doesn't seem to have a valid Outlook backup.")
+                self.showErrorBoxSignal.emit(
+                    "Error", "Selected directory doesn't seem to have a valid Outlook backup.")
                 return
 
             source_dir = os.path.join(backup_dir_selected, "EMAIL", "Outlook")
 
             # Restoring PST files
-            outlook_data = os.path.join(os.environ["USERPROFILE"], "Documents", "Outlook Files")
+            outlook_data = os.path.join(
+                os.environ["USERPROFILE"], "Documents", "Outlook Files")
             for item in os.listdir(source_dir):
                 if item.endswith(('.pst', '.ost')):
                     s = os.path.join(source_dir, item)
@@ -561,7 +589,8 @@ class BackupApp(QMainWindow):
 
             # Restoring Signatures
             sig_source = os.path.join(source_dir, "Signatures")
-            sig_dest = os.path.join(os.environ["USERPROFILE"], "AppData", "Roaming", "Microsoft", "Signatures")
+            sig_dest = os.path.join(
+                os.environ["USERPROFILE"], "AppData", "Roaming", "Microsoft", "Signatures")
             if os.path.exists(sig_source):
                 if os.path.exists(sig_dest):
                     shutil.rmtree(sig_dest)
@@ -569,7 +598,8 @@ class BackupApp(QMainWindow):
 
             # Restoring Templates
             template_source = os.path.join(source_dir, "Templates")
-            template_dest = os.path.join(os.environ["USERPROFILE"], "AppData", "Roaming", "Microsoft", "Templates")
+            template_dest = os.path.join(
+                os.environ["USERPROFILE"], "AppData", "Roaming", "Microsoft", "Templates")
             if os.path.exists(template_source):
                 if os.path.exists(template_dest):
                     shutil.rmtree(template_dest)
@@ -581,8 +611,8 @@ class BackupApp(QMainWindow):
         except Exception as e:
             self.showErrorBoxSignal.emit("Error", str(e))
 
-
     # Browser Backup for Chrome and Firefox
+
     def backup_browser(self):
         try:
             self.global_progress.setValue(0)
@@ -596,7 +626,8 @@ class BackupApp(QMainWindow):
                 if not os.path.exists(self.backup_dir):
                     os.makedirs(self.backup_dir)
 
-                total_files_chrome = sum([len(files) for _, _, files in os.walk(chrome_path)])
+                total_files_chrome = sum(
+                    [len(files) for _, _, files in os.walk(chrome_path)])
                 files_copied_chrome = 0
 
                 for item in os.listdir(chrome_path):
@@ -604,9 +635,12 @@ class BackupApp(QMainWindow):
                     d = os.path.join(self.backup_dir, item)
                     shutil.copy2(s, d)
                     files_copied_chrome += 1
-                    progress_chrome = (files_copied_chrome / total_files_chrome) * 50  # Assuming Chrome backup is 50% of the whole process
+                    # Assuming Chrome backup is 50% of the whole process
+                    progress_chrome = (files_copied_chrome /
+                                       total_files_chrome) * 50
                     self.progressUpdateSignal.emit(int(progress_chrome))
-                    self.showInfoBoxSignal.emit("Info", "Chrome browser data backed up!")
+                    self.showInfoBoxSignal.emit(
+                        "Info", "Chrome browser data backed up!")
 
             # Backup Firefox
             firefox_path = os.path.join(
@@ -617,7 +651,8 @@ class BackupApp(QMainWindow):
                 if not os.path.exists(self.backup_dir):
                     os.makedirs(self.backup_dir)
 
-                total_files_firefox = sum([len(files) for _, _, files in os.walk(firefox_path)])
+                total_files_firefox = sum(
+                    [len(files) for _, _, files in os.walk(firefox_path)])
                 files_copied_firefox = 0
 
                 for item in os.listdir(firefox_path):
@@ -625,37 +660,45 @@ class BackupApp(QMainWindow):
                     d = os.path.join(self.backup_dir, item)
                     shutil.copy2(s, d)
                     files_copied_firefox += 1
-                    progress_firefox = 50 + (files_copied_firefox / total_files_firefox) * 50  # Firefox starts from 50% to 100%
+                    # Firefox starts from 50% to 100%
+                    progress_firefox = 50 + \
+                        (files_copied_firefox / total_files_firefox) * 50
                     self.progressUpdateSignal.emit(int(progress_firefox))
 
             self.showInfoBoxSignal.emit("Info", "Browser data backed up!")
         except Exception as e:
-            self.showErrorBoxSignal.emit("Error", f"Failed to backup browser data: {e}")
+            self.showErrorBoxSignal.emit(
+                "Error", f"Failed to backup browser data: {e}")
 
     # ... Add other functions similarly ...
 
     def restore_browser(self):
         try:
             # Prompt user to select a backup directory.
-            backup_dir_selected = QFileDialog.getExistingDirectory(self, "Select the directory where your backup resides")
+            backup_dir_selected = QFileDialog.getExistingDirectory(
+                self, "Select the directory where your backup resides")
             if not backup_dir_selected:
                 return
 
             # Restore Chrome Data
             if os.path.exists(os.path.join(backup_dir_selected, "BROWSER", "Chrome")):
-                source_dir = os.path.join(backup_dir_selected, "BROWSER", "Chrome")
-                chrome_dest = os.path.join(os.environ["LOCALAPPDATA"], "Google", "Chrome", "User Data")
+                source_dir = os.path.join(
+                    backup_dir_selected, "BROWSER", "Chrome")
+                chrome_dest = os.path.join(
+                    os.environ["LOCALAPPDATA"], "Google", "Chrome", "User Data")
 
                 # Advise user to close Chrome before proceeding
                 reply = QMessageBox.warning(self, "Warning",
-                        "Please close all instances of Chrome before proceeding. Continue?",
-                        QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
+                                            "Please close all instances of Chrome before proceeding. Continue?",
+                                            QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
                 if reply == QMessageBox.Yes:
                     if os.path.exists(chrome_dest):
                         shutil.rmtree(chrome_dest)
                         # Restoring Chrome Data
-                        chrome_backup_path = os.path.join(backup_dir_selected, "BROWSER", "Chrome")
-                        total_files_chrome = sum([len(files) for _, _, files in os.walk(chrome_backup_path)])
+                        chrome_backup_path = os.path.join(
+                            backup_dir_selected, "BROWSER", "Chrome")
+                        total_files_chrome = sum(
+                            [len(files) for _, _, files in os.walk(chrome_backup_path)])
                         files_restored_chrome = 0
 
                         for item in os.listdir(chrome_backup_path):
@@ -663,18 +706,23 @@ class BackupApp(QMainWindow):
                             d = os.path.join(chrome_dest, item)
                             shutil.copy2(s, d)
                             files_restored_chrome += 1
-                            progress_chrome = (files_restored_chrome / total_files_chrome) * 50  # Assuming Chrome restore is 50% of the whole process
-                            self.progressUpdateSignal.emit(int(progress_chrome))
+                            # Assuming Chrome restore is 50% of the whole process
+                            progress_chrome = (
+                                files_restored_chrome / total_files_chrome) * 50
+                            self.progressUpdateSignal.emit(
+                                int(progress_chrome))
 
             # Restore Firefox Data
             if os.path.exists(os.path.join(backup_dir_selected, "BROWSER", "Firefox")):
-                source_dir = os.path.join(backup_dir_selected, "BROWSER", "Firefox")
-                firefox_dest = os.path.join(os.environ["APPDATA"], "Mozilla", "Firefox", "Profiles")
+                source_dir = os.path.join(
+                    backup_dir_selected, "BROWSER", "Firefox")
+                firefox_dest = os.path.join(
+                    os.environ["APPDATA"], "Mozilla", "Firefox", "Profiles")
 
                 # Advise user to close Firefox before proceeding
                 reply = QMessageBox.warning(self, "Warning",
-                        "Please close all instances of Firefox before proceeding. Continue?",
-                        QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
+                                            "Please close all instances of Firefox before proceeding. Continue?",
+                                            QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
                 if reply == QMessageBox.Yes:
                     for item in os.listdir(source_dir):
                         s = os.path.join(source_dir, item)
@@ -682,8 +730,10 @@ class BackupApp(QMainWindow):
                         if os.path.exists(d):
                             shutil.rmtree(d)
                         # Restoring Firefox Data
-                        firefox_backup_path = os.path.join(backup_dir_selected, "BROWSER", "Firefox")
-                        total_files_firefox = sum([len(files) for _, _, files in os.walk(firefox_backup_path)])
+                        firefox_backup_path = os.path.join(
+                            backup_dir_selected, "BROWSER", "Firefox")
+                        total_files_firefox = sum(
+                            [len(files) for _, _, files in os.walk(firefox_backup_path)])
                         files_restored_firefox = 0
 
                         for item in os.listdir(firefox_backup_path):
@@ -691,12 +741,16 @@ class BackupApp(QMainWindow):
                             d = os.path.join(firefox_dest, item)
                             shutil.copy2(s, d)
                             files_restored_firefox += 1
-                            progress_firefox = 50 + (files_restored_firefox / total_files_firefox) * 50  # Firefox starts from 50% to 100%
-                            self.progressUpdateSignal.emit(int(progress_firefox))
+                            # Firefox starts from 50% to 100%
+                            progress_firefox = 50 + \
+                                (files_restored_firefox / total_files_firefox) * 50
+                            self.progressUpdateSignal.emit(
+                                int(progress_firefox))
 
             self.showInfoBoxSignal.emit("Info", "Browser data restored!")
         except Exception as e:
             self.showErrorBoxSignal.emit("Error", str(e))
+
 
 if __name__ == '__main__':
     ensure_admin_rights()  # Ensure we have admin rights before running our app

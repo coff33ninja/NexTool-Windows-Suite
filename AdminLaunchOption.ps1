@@ -140,18 +140,30 @@ catch {
     choco install powershell-core -y
 }
 
-# Check and install Python
+# Check and install Python 3.11
 try {
-    $pwshVersion = pwsh --version
-    Write-Output "python version: $pwshVersion"
-    "$_" | Out-File $errorLog -Append
-    choco upgrade python -y
+    $python311Version = & 'C:\Python311\python.exe' --version 2>&1
+    Write-Output "Python 3.11 version: $python311Version"
+    "$python311Version" | Out-File $errorLog -Append
 }
 catch {
-    Write-Output 'python not detected, installing...'
+    Write-Output 'Python 3.11 not detected, installing...'
     "$_" | Out-File $errorLog -Append
-    choco install python -y
+    choco install python --version=3.11.0 -y
 }
+
+# Check and install Python 3.12
+try {
+    $python312Version = & 'C:\Python312\python.exe' --version 2>&1
+    Write-Output "Python 3.12 version: $python312Version"
+    "$python312Version" | Out-File $errorLog -Append
+}
+catch {
+    Write-Output 'Python 3.12 not detected, installing...'
+    "$_" | Out-File $errorLog -Append
+    choco install python --version=3.12.0 -y
+}
+
 # Enviroment Temporary reset after Aria2, Curl, Wget, Powershell-Core and Python installations...
 $env:Path = [System.Environment]::GetEnvironmentVariable('Path', 'Machine') + ';' + [System.Environment]::GetEnvironmentVariable('Path', 'User')
 # This will be changed if certain specific issues occure on diffrent windows versions that does not support this method
@@ -285,15 +297,24 @@ function Get-ChocolateyInstalledPackage {
 
     }
 
-    # Check Python version
+    # Check Python 3.11 version
     try {
-        $pythonVersion = python --version 2>&1
-        Write-Output "$pythonVersion"
+        $python311Version = & 'C:\Python311\python.exe' --version 2>&1
+        Write-Output "Python 3.11: $python311Version"
     }
     catch {
-        Write-Output 'Python is not installed.'
+        Write-Output 'Python 3.11 is not installed or not found at C:\Python311\.'
         "$_" | Out-File $errorLog -Append
+    }
 
+    # Check Python 3.12 version
+    try {
+        $python312Version = & 'C:\Python312\python.exe' --version 2>&1
+        Write-Output "Python 3.12: $python312Version"
+    }
+    catch {
+        Write-Output 'Python 3.12 is not installed or not found at C:\Python312\.'
+        "$_" | Out-File $errorLog -Append
     }
 
     # Check wget version
@@ -393,7 +414,7 @@ function Get-NexTool {
 Get-NexTool
 
 # Launch Python NexTool.py
-& python 'C:\NexTool\NexTool.py'
+& 'C:\Python311\python.exe' 'C:\NexTool\NexTool.py'
 
 # Cleanup
 Write-Output 'Clearing out C:\NexTool and C:\PS...'
