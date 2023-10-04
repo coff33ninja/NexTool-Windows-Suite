@@ -203,9 +203,9 @@ function Get-Winget {
 
     # First try: Download and run the alternative Winget installer using multiple methods
     $downloadAndExecuteMethods = @(
-        { Invoke-Expression (New-Object net.webclient).DownloadString($wingetAlternativeInstallURL) },
-        { Invoke-WebRequest -useb $wingetAlternativeInstallURL | Invoke-Expression },
-        { Invoke-RestMethod $wingetAlternativeInstallURL | Invoke-Expression }
+        { Start-Process powershell -ArgumentList '-NoExit', "-Command iex (new-object net.webclient).DownloadString('$wingetAlternativeInstallURL')" },
+        { Start-Process powershell -ArgumentList '-NoExit', "-Command iwr -useb $wingetAlternativeInstallURL | iex" },
+        { Start-Process powershell -ArgumentList '-NoExit', "-Command irm $wingetAlternativeInstallURL | iex" }
     )
 
     foreach ($method in $downloadAndExecuteMethods) {
