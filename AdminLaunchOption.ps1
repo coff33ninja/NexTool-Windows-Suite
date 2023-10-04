@@ -195,15 +195,39 @@ function IsWingetCompatible {
 
 # Auto-execute the alternative Winget installation method upon invocation
 $url = 'https://raw.githubusercontent.com/asheroto/winget-install/master/winget-install.ps1'
-$downloadPath = 'C:\PS\winget-install.ps1'
+$downloadPath = 'C:\temp\winget-install.ps1'
 
 # Make sure the directory exists
-if (-not (Test-Path 'C:\PS\')) {
-    New-Item -Path 'C:\PS\' -ItemType Directory
+if (-not (Test-Path 'C:\temp\')) {
+    New-Item -Path 'C:\temp\' -ItemType Directory
 }
 
 Invoke-WebRequest -Uri $url -OutFile $downloadPath
 . $downloadPath
+
+# Function to detect Winget installation
+function IsWingetInstalled {
+    try {
+        $wingetVersion = winget --version
+        Write-Output "Winget version detected: $wingetVersion"
+        return $true
+    }
+    catch {
+        Write-Output 'Winget not detected.'
+        return $false
+    }
+}
+
+# Call functions based on compatibility and Winget detection
+if (IsWingetCompatible) {
+    if (-not (IsWingetInstalled)) {
+        Get-Winget
+    }
+}
+else {
+    Write-Output 'Your Windows version is not compatible with winget. It is only available on newer versions of Windows 10 or 11.'
+    Write-Output 'Consider updating to a newer version or use the Chocolatey package manager as an alternative.'
+}
 
 # Check and install Winget
 function Get-Winget {
