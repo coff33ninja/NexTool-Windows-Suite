@@ -265,7 +265,7 @@ function Test-If-WingetInstalled {
 }
 
 # Call the function
-Check-WingetInstalled
+Test-If-WingetInstalled
 
 # Attempt to download NexTool.py using multiple methods
 function Get-NexTool {
