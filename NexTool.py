@@ -169,8 +169,8 @@ def run_winget_check(action_type):
             install_winget_powershell()
 
     def install_winget_powershell():
-        print_to_terminal("Running Powershell installation Script...")
-        base_dir = "C:\\NexTool\\System\\Basic Computer Report"
+        os.system("cls")
+        base_dir = "C:\\NexTool"
         if not os.path.exists(base_dir):
             os.makedirs(base_dir)
         destination = os.path.join(base_dir, "winget-install.ps1")
