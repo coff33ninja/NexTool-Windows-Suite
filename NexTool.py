@@ -21,6 +21,7 @@ import ctypes
 import win32service
 import winreg as reg
 import json
+import tempfile
 
 app = ThemedTk(theme="breeze-dark")
 app.title("NexTool Windows Suite")
@@ -31,11 +32,13 @@ def is_admin():
     try:
         # Attempt to read the system file which is only readable by admin
         with open(
-            os.path.join(os.environ["SystemRoot"], "system32", "config", "system"), "r"
+            os.path.join(os.environ["SystemRoot"],
+                         "system32", "config", "system"), "r"
         ):
             return True
     except PermissionError:
         return False
+
 
 def print_to_terminal(msg):
     terminal.insert(tk.END, f"{msg}\n")
@@ -66,9 +69,11 @@ def download_file(url, destination):
             app.update_idletasks()
             print_to_terminal(f"Downloading: {progress}% complete")
 
-        urllib.request.urlretrieve(url, destination, reporthook=download_progress)
+        urllib.request.urlretrieve(
+            url, destination, reporthook=download_progress)
     except Exception as e:
         print_to_terminal(f"Error downloading {url} to {destination}: {e}")
+
 
 def extract_zip(zip_path, destination_folder):
     """
@@ -93,9 +98,30 @@ def extract_zip(zip_path, destination_folder):
 def msg_box(message, title, style):
     return ctypes.windll.user32.MessageBoxW(0, message, title, style)
 
+
 def run_winget_check(action_type):
-    # Check if winget is available
-    if not os.path.exists('C:\\temp\\winget-available.txt'):
+    if is_winget_installed():
+        terminal.insert(tk.END, "Winget is available!\n")
+        terminal.see(tk.END)  # Auto-scroll to the end
+
+        if action_type == "gui":
+            # Specific functionality for Winget GUI
+            run_winget_gui()
+        elif action_type == "pre_set_selections":
+            # Specific functionality for Winget Pre-Set Selections
+            install_winget_packages()
+    else:
+        prompt_winget_installation()
+
+    def is_winget_installed():
+        try:
+            result = subprocess.run(
+                ["winget", "--version"], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            return result.returncode == 0
+        except FileNotFoundError:
+            return False
+
+    def prompt_winget_installation():
         # Message to guide user
         msg = ("Winget is not detected on this machine. Please follow the instructions below:\n\n"
                "Method 1: Install winget via Microsoft Store\n"
@@ -117,32 +143,61 @@ def run_winget_check(action_type):
         # Make links clickable
         text_widget.insert(tk.END, msg)
         text_widget.tag_configure("hyper", foreground="blue", underline=True)
-        text_widget.tag_bind("hyper", "<Enter>", lambda e: text_widget.config(cursor="hand2"))
-        text_widget.tag_bind("hyper", "<Leave>", lambda e: text_widget.config(cursor="arrow"))
+        text_widget.tag_bind("hyper", "<Enter>",
+                             lambda e: text_widget.config(cursor="hand2"))
+        text_widget.tag_bind("hyper", "<Leave>",
+                             lambda e: text_widget.config(cursor="arrow"))
 
         # Open Microsoft Store link
         start_link = msg.find("[Click Here]")
         end_link = start_link + len("[Click Here]")
         text_widget.tag_add("hyper", f"1.{start_link}", f"1.{end_link}")
-        text_widget.tag_bind("hyper", "<Button-1>", lambda e: webbrowser.open("https://aka.ms/winget-install"))
+        text_widget.tag_bind(
+            "hyper", "<Button-1>", lambda e: webbrowser.open("https://aka.ms/winget-install"))
 
         # Open GitHub link
         start_link_gh = msg.find("[Winget GitHub page]")
         end_link_gh = start_link_gh + len("[Winget GitHub page]")
         text_widget.tag_add("hyper", f"1.{start_link_gh}", f"1.{end_link_gh}")
-        text_widget.tag_bind("hyper", "<Button-1>", lambda e: webbrowser.open("https://github.com/microsoft/winget-cli/releases"))
+        text_widget.tag_bind("hyper", "<Button-1>", lambda e: webbrowser.open(
+            "https://github.com/microsoft/winget-cli/releases"))
 
-        text_widget.config(state=tk.DISABLED)  # Make the text widget read-only
-    else:
-        terminal.insert(tk.END, "Winget is available!\n")
-        terminal.see(tk.END)  # Auto-scroll to the end
+        # Prompt for Winget PowerShell installation
+        response = tk.messagebox.askyesno("Install using PowerShell?",
+                                          "Do you want to attempt the installation using a PowerShell script?")
+        if response:
+            install_winget_powershell()
 
-        if action_type == "gui":
-            # Specific functionality for Winget GUI
-            run_winget_gui()
-        elif action_type == "pre_set_selections":
-            # Specific functionality for Winget Pre-Set Selections
-            install_winget_packages()
+    def install_winget_powershell():
+        print_to_terminal("Running Powershell installation Script...")
+        base_dir = "C:\\NexTool\\System\\Basic Computer Report"
+        if not os.path.exists(base_dir):
+            os.makedirs(base_dir)
+        destination = os.path.join(base_dir, "winget-install.ps1")
+        download_file(
+            "https://raw.githubusercontent.com/asheroto/winget-install/master/winget-install.ps1",
+            destination
+        )
+
+        # Execute the PowerShell script
+        subprocess.run(
+            [
+                "powershell",
+                "-ExecutionPolicy",
+                "Bypass",
+                "-File",
+                destination,
+                "-verb",
+                "runas",
+            ],
+            check=True,
+        )
+
+        # Clean up the downloaded script
+        os.remove(destination)
+
+        return
+
 
 def run_quick_info():
     os.system("cls")
@@ -253,9 +308,11 @@ def run_speed_test():
 
 
 def list_adapters():
-    print_to_terminal("Listing all network configurations registered on the device...")
+    print_to_terminal(
+        "Listing all network configurations registered on the device...")
     try:
-        output = subprocess.check_output(["netsh", "interface", "ip", "show", "config"])
+        output = subprocess.check_output(
+            ["netsh", "interface", "ip", "show", "config"])
         print_to_terminal(output.decode())
     except Exception as e:
         print_to_terminal(f"Failed to list adapters: {e}")
@@ -292,7 +349,8 @@ def auto_config_wifi():
             check=True,
         )
 
-        print_to_terminal("Wi-Fi configured successfully for automatic IP and DNS.")
+        print_to_terminal(
+            "Wi-Fi configured successfully for automatic IP and DNS.")
     except subprocess.CalledProcessError:
         print_to_terminal(
             "Failed to configure Wi-Fi. Ensure you have the necessary permissions and that Wi-Fi is a valid interface name."
@@ -418,11 +476,13 @@ def traceroute():
 
 def setup_network_share():
     print_to_terminal("NETWORK SHARE MAP SETUP")
-    driveletter = simpledialog.askstring("Input", "Enter a letter to use for map:")
+    driveletter = simpledialog.askstring(
+        "Input", "Enter a letter to use for map:")
     computer_name = simpledialog.askstring(
         "Input", "Enter an IP address or hostname for map:"
     )
-    share_name = simpledialog.askstring("Input", "Enter a folder share name for map:")
+    share_name = simpledialog.askstring(
+        "Input", "Enter a folder share name for map:")
     persistent_choice = simpledialog.askstring(
         "Input", "Type ONLY YES or NO to make it permanent:"
     )
@@ -436,7 +496,8 @@ def setup_network_share():
     cmd_str = f"net use {driveletter}: \\\\{computer_name}\\{share_name} /user:{username} {password} /PERSISTENT:{persistent_choice}"
 
     try:
-        subprocess.run(cmd_str, shell=True, check=True, capture_output=True, text=True)
+        subprocess.run(cmd_str, shell=True, check=True,
+                       capture_output=True, text=True)
         print_to_terminal(
             f"Successfully mapped drive {driveletter}: to {computer_name}\\{share_name}"
         )
@@ -452,8 +513,10 @@ def remove_network_map():
 
     try:
         # Attempt to remove the network map
-        subprocess.run(["net", "use", f"{drive_letter}:", "/delete"], check=True)
-        print_to_terminal(f"{drive_letter}: drive mapping removed successfully.")
+        subprocess.run(
+            ["net", "use", f"{drive_letter}:", "/delete"], check=True)
+        print_to_terminal(
+            f"{drive_letter}: drive mapping removed successfully.")
     except subprocess.CalledProcessError:
         print_to_terminal(f"Failed to remove {drive_letter}: drive mapping.")
 
@@ -497,7 +560,8 @@ def wifi_configuration():
                         for line in wifi_lines
                         if "Key Content" in line
                     ]
-                    print_to_terminal(f"SSID: {profile}  |  Password: {wifi_lines[0]}")
+                    print_to_terminal(
+                        f"SSID: {profile}  |  Password: {wifi_lines[0]}")
                 except subprocess.CalledProcessError as e:
                     print_to_terminal(
                         f"Encountered an error while fetching details of {profile}. {e}"
@@ -555,6 +619,7 @@ def disable_windows_defender():
 
     print_to_terminal("WINDOWS DEFENDER DISABLED SUCCESSFULLY.")
 
+
 def disable_tamper_protection():
     print_to_terminal("ATTEMPTING TO DISABLE TAMPER PROTECTION...")
 
@@ -567,7 +632,8 @@ def disable_tamper_protection():
         subprocess.run(cmd, check=True)
         print_to_terminal("Tamper Protection disabled successfully.")
     except subprocess.CalledProcessError as e:
-        print_to_terminal(f"Error occurred during command execution:\n{e.stderr}")
+        print_to_terminal(
+            f"Error occurred during command execution:\n{e.stderr}")
     except Exception as e:
         print_to_terminal(f"Error occurred: {e}")
 
@@ -660,19 +726,24 @@ def run_TELEMETRY():
         )
 
     except subprocess.CalledProcessError as e:
-        print_to_terminal(f"Error occurred during command execution:\n{e.stderr}")
+        print_to_terminal(
+            f"Error occurred during command execution:\n{e.stderr}")
     except Exception as e:
         print_to_terminal(f"Error occurred: {e}")
+
 
 def run_MAS():
     print_to_terminal("Executing Microsoft Activation Script...")
     try:
         # Execute the PowerShell command
-        command = ["powershell.exe", "-Command", "irm https://massgrave.dev/get | iex"]
-        result = subprocess.run(command, text=True, capture_output=True, check=True)
+        command = ["powershell.exe", "-Command",
+                   "irm https://massgrave.dev/get | iex"]
+        result = subprocess.run(
+            command, text=True, capture_output=True, check=True)
         print_to_terminal(result.stdout)
     except subprocess.CalledProcessError as e:
-        print_to_terminal(f"Error occurred during command execution:\n{e.stderr}")
+        print_to_terminal(
+            f"Error occurred during command execution:\n{e.stderr}")
     except Exception as e:
         print_to_terminal(f"Error occurred: {e}")
 
@@ -714,15 +785,19 @@ def pause_windows_update():
 
     # Disable and stop the Windows Update service
     try:
-        scm = win32service.OpenSCManager(None, None, win32service.SC_MANAGER_ALL_ACCESS)
-        handle = win32service.OpenService(scm, "wuauserv", win32service.SERVICE_ALL_ACCESS)
+        scm = win32service.OpenSCManager(
+            None, None, win32service.SC_MANAGER_ALL_ACCESS)
+        handle = win32service.OpenService(
+            scm, "wuauserv", win32service.SERVICE_ALL_ACCESS)
         win32service.StopService(handle)  # type: ignore
-        win32service.ChangeServiceConfig(handle, win32service.SERVICE_NO_CHANGE, win32service.SERVICE_DISABLED, win32service.SERVICE_NO_CHANGE, None, None, False, None, None, None, None)
+        win32service.ChangeServiceConfig(handle, win32service.SERVICE_NO_CHANGE, win32service.SERVICE_DISABLED,
+                                         win32service.SERVICE_NO_CHANGE, None, None, False, None, None, None, None)
     except Exception as e:
         print(f"Error stopping or disabling Windows Update service: {e}")
 
     # Prompt the user for the number of days
-    number_of_days = int(input("Enter the number of days to pause updates for: "))
+    number_of_days = int(
+        input("Enter the number of days to pause updates for: "))
     trigger_time = datetime.now() + timedelta(days=number_of_days)
 
     # Create a scheduled task to re-enable the Windows Update service
@@ -735,12 +810,14 @@ def pause_windows_update():
 
         # Create a time-based trigger that fires at the specified date/time
         start_time = trigger_time.strftime("%Y-%m-%dT%H:%M:%S")
-        trigger = task_def.Triggers.Create(win32com.client.constants.TASK_TRIGGER_TIME)
+        trigger = task_def.Triggers.Create(
+            win32com.client.constants.TASK_TRIGGER_TIME)
         trigger.StartBoundary = start_time
         trigger.Enabled = True
 
         # Define the action to restart the Windows Update service
-        action = task_def.Actions.Create(win32com.client.constants.TASK_ACTION_EXEC)
+        action = task_def.Actions.Create(
+            win32com.client.constants.TASK_ACTION_EXEC)
         action.Path = "powershell.exe"
         action.Arguments = '-c "Start-Service wuauserv"'
 
@@ -892,7 +969,8 @@ def install_choco_packages():
         for package in failed_packages:
             log_file.write(f"- {package}\n")
 
-    print(f"Installation complete. A log file has been saved to: {log_file_path}")
+    print(
+        f"Installation complete. A log file has been saved to: {log_file_path}")
     inform_about_choco_gui()
 
 
@@ -954,8 +1032,10 @@ def install_adobe_reader():
 
     print(f"Installing Adobe Acrobat Reader for {architecture}...")
     try:
-        subprocess.run(["winget", "install", "--id=" + package_id, "-e"], check=True)
-        print(f"Adobe Acrobat Reader for {architecture} installed successfully!")
+        subprocess.run(["winget", "install", "--id=" +
+                       package_id, "-e"], check=True)
+        print(
+            f"Adobe Acrobat Reader for {architecture} installed successfully!")
     except subprocess.CalledProcessError:
         print(f"Error installing Adobe Acrobat Reader for {architecture}.")
     except Exception as e:
@@ -1052,7 +1132,8 @@ def install_winget_packages():
         print(f"Attempting to install {package}...")
 
         try:
-            subprocess.run(["winget", "install", "--id=" + package, "-e"], check=True)
+            subprocess.run(["winget", "install", "--id=" +
+                           package, "-e"], check=True)
             print(f"{package} installed successfully!")
             installed_packages.append(package)
         except subprocess.CalledProcessError:
@@ -1083,7 +1164,8 @@ def install_winget_packages():
         for package in failed_packages:
             log_file.write(f"- {package}\n")
 
-    print(f"Installation complete. A log file has been saved to: {log_file_path}")
+    print(
+        f"Installation complete. A log file has been saved to: {log_file_path}")
     # Inform the user about the Winget GUI
     inform_about_winget_gui()
 
@@ -1274,29 +1356,36 @@ def create_office_config(architecture, destination):
     with open(destination, "w") as xml_file:
         xml_file.write(xml_content)
 
+
 # Services, Startup and Tasks Manager
 RECOMMENDED_DISABLE = [
     "bits", "BDESVC", "BcastDVRUserService_7c360", "GoogleChromeElevationService",
     "gupdate", "gupdatem", "vmickvpexchange", "vmicguestinterface", "vmicshutdown"
 ]
 
+
 def list_all_services():
     command = ["sc", "query", "type=", "service"]
     output = subprocess.check_output(command, text=True).splitlines()
-    services = [line.split(":")[1].strip() for line in output if "SERVICE_NAME" in line]
+    services = [line.split(":")[1].strip()
+                for line in output if "SERVICE_NAME" in line]
     return services
+
 
 def backup_services():
     services = list_all_services()
     service_status = {}
     for service in services:
         status_cmd = ["sc", "qc", service]
-        status_output = subprocess.check_output(status_cmd, text=True).splitlines()
-        status = [line.split(":", 1)[1].strip() for line in status_output if "START_TYPE" in line][0]
+        status_output = subprocess.check_output(
+            status_cmd, text=True).splitlines()
+        status = [line.split(":", 1)[1].strip()
+                  for line in status_output if "START_TYPE" in line][0]
         service_status[service] = status
 
     with open("backup_services.json", "w") as file:
         json.dump(service_status, file)
+
 
 def restore_services():
     with open("backup_services.json", "r") as file:
@@ -1305,20 +1394,27 @@ def restore_services():
     for service, status in backup_statuses.items():
         set_service_start_type(service, status)
 
+
 def get_service_start_type(service):
     status_cmd = ["sc", "qc", service]
     status_output = subprocess.check_output(status_cmd, text=True).splitlines()
-    status = [line.split(":", 1)[1].strip() for line in status_output if "START_TYPE" in line]
+    status = [line.split(":", 1)[1].strip()
+              for line in status_output if "START_TYPE" in line]
     return status[0] if status else None
 
+
 def set_service_start_type(service, start_type):
-    subprocess.run(["sc", "config", service, f"start= {start_type}"], text=True)
+    subprocess.run(
+        ["sc", "config", service, f"start= {start_type}"], text=True)
+
 
 def control_service(service, action):
     if action in ["start", "stop", "pause", "continue"]:
-        result = subprocess.run(["sc", action, service], capture_output=True, text=True)
+        result = subprocess.run(["sc", action, service],
+                                capture_output=True, text=True)
     elif action in ["auto", "demand", "disabled"]:
-        result = subprocess.run(["sc", "config", service, f"start= {action}"], capture_output=True, text=True)
+        result = subprocess.run(
+            ["sc", "config", service, f"start= {action}"], capture_output=True, text=True)
     else:
         return f"Invalid action: {action}"
 
@@ -1332,6 +1428,7 @@ def control_service(service, action):
     else:
         return f"Successfully performed action '{action}' on '{service}'."
 
+
 def disable_recommended_services():
     results = []
     for service in RECOMMENDED_DISABLE:
@@ -1339,12 +1436,14 @@ def disable_recommended_services():
         results.append(result)
     return results
 
+
 def disable_selected_services(service_list):
     results = []
     for service in service_list:
         result = control_service(service, "disabled")
         results.append(result)
     return results
+
 
 def list_startup_applications():
     key_path = r"Software\Microsoft\Windows\CurrentVersion\Run"
@@ -1360,25 +1459,33 @@ def list_startup_applications():
                 break
     return startup_apps
 
+
 def add_startup_application(name, path):
     key_path = r"Software\Microsoft\Windows\CurrentVersion\Run"
     with reg.OpenKey(reg.HKEY_CURRENT_USER, key_path, 0, reg.KEY_SET_VALUE) as key:
         reg.SetValueEx(key, name, 0, reg.REG_SZ, path)
+
 
 def remove_startup_application(name):
     key_path = r"Software\Microsoft\Windows\CurrentVersion\Run"
     with reg.OpenKey(reg.HKEY_CURRENT_USER, key_path, 0, reg.KEY_SET_VALUE) as key:
         reg.DeleteValue(key, name)
 
+
 def list_scheduled_tasks():
-    tasks = subprocess.check_output(["schtasks", "/query", "/fo", "LIST"]).decode()
+    tasks = subprocess.check_output(
+        ["schtasks", "/query", "/fo", "LIST"]).decode()
     return tasks
 
+
 def create_scheduled_task(name, command, time="12:00", frequency="daily"):
-    subprocess.run(["schtasks", "/create", "/sc", frequency, "/tn", name, "/tr", command, "/st", time])
+    subprocess.run(["schtasks", "/create", "/sc", frequency,
+                   "/tn", name, "/tr", command, "/st", time])
+
 
 def delete_scheduled_task(name):
     subprocess.run(["schtasks", "/delete", "/tn", name, "/f"])
+
 
 def button_action(sub_item):
     function_mapping = {
@@ -1419,6 +1526,8 @@ def button_action(sub_item):
         terminal.see(tk.END)  # Auto-scroll to the end
 
 # Function to display the main menu
+
+
 def show_main_menu():
     for child in left_frame.winfo_children():
         child.grid_forget()
@@ -1462,7 +1571,8 @@ def show_sub_menu(main_item):
     back_button = ttk.Button(
         left_frame, text="Back to Main Menu", command=show_main_menu
     )
-    back_button.grid(row=len(sub_items), column=0, sticky="ew", padx=10, pady=10)
+    back_button.grid(row=len(sub_items), column=0,
+                     sticky="ew", padx=10, pady=10)
 
 
 def show_sub_sub_menu(main_item, sub_category):
@@ -1474,7 +1584,8 @@ def show_sub_sub_menu(main_item, sub_category):
         sub_sub_button = ttk.Button(
             left_frame,
             text=sub_sub_item,
-            command=lambda sub_sub_item=sub_sub_item: button_action(sub_sub_item),
+            command=lambda sub_sub_item=sub_sub_item: button_action(
+                sub_sub_item),
         )
         sub_sub_button.grid(row=idx, column=0, sticky="ew", padx=10, pady=5)
 
@@ -1483,7 +1594,9 @@ def show_sub_sub_menu(main_item, sub_category):
         text=f"Back to {main_item}",
         command=lambda: show_sub_menu(main_item),
     )
-    back_button.grid(row=len(sub_sub_items), column=0, sticky="ew", padx=10, pady=10)
+    back_button.grid(row=len(sub_sub_items), column=0,
+                     sticky="ew", padx=10, pady=10)
+
 
 class ToolTip:
     def __init__(self, widget, text="Widget Info"):
@@ -1523,7 +1636,8 @@ tabs_tooltips = {
     "Advanced": "Access advanced features and utilities.",
     "Extras": "Explore additional tools and features.",
     "Shutdown Options": "Choose different shutdown or restart options for the system.",
-    "Additional Tool": "Access more tools to enhance your system.",  # This is added based on your 'tabs' structure.
+    # This is added based on your 'tabs' structure.
+    "Additional Tool": "Access more tools to enhance your system.",
 }
 
 # Sub Menu Tooltips
@@ -1627,7 +1741,8 @@ system_info = {
 bottom_frame = ttk.Frame(app)
 bottom_frame.grid(row=1, column=0, columnspan=2, sticky="ew", padx=5, pady=5)
 
-info_text = "\n".join([f"{key}: {value}" for key, value in system_info.items()])
+info_text = "\n".join(
+    [f"{key}: {value}" for key, value in system_info.items()])
 info_label = ttk.Label(bottom_frame, text=info_text, anchor="w")
 info_label.pack(fill="both", expand=True, padx=10, pady=10)
 
