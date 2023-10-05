@@ -76,20 +76,23 @@ try {
 }
 catch {
     Write-Output 'Chocolatey not detected, attempting installation...'
-    Invoke-Expression ((New-Object System.Net.WebClient).DownloadString('https://chocolatey.org/install.ps1'))
-    $env:Path += ";$env:ALLUSERSPROFILE\chocolatey\bin"
-
-    # Re-check Chocolatey version after installation
     try {
+        Invoke-Expression ((New-Object System.Net.WebClient).DownloadString('https://chocolatey.org/install.ps1'))
+        $env:Path += ";$env:ALLUSERSPROFILE\chocolatey\bin"
+
+        # Re-check Chocolatey version after installation
         $chocoVersion = choco --version
         Write-Output "Chocolatey version after installation: $chocoVersion"
     }
     catch {
-        Write-Output 'Failed to install Chocolatey. Exiting...'
+        Write-Output 'Failed to install Chocolatey. Exiting script due to this critical error...'
         "$_" | Out-File $errorLog -Append
         exit
     }
 }
+
+# Enviroment Temporary reset after Chocolatey instalation...
+$env:Path = [System.Environment]::GetEnvironmentVariable('Path', 'Machine') + ';' + [System.Environment]::GetEnvironmentVariable('Path', 'User')
 
 # Check and install/upgrade Aria2
 try {
@@ -117,7 +120,7 @@ catch {
 
 # Check and install/upgrade Curl
 try {
-    $wgetVersion = cmd /c curl -h | Select-Object -First 1
+    $curlVersion = cmd /c curl -h | Select-Object -First 1
     Write-Output $curlVersion
     choco upgrade curl -y
 }
@@ -166,7 +169,7 @@ catch {
 
 # Enviroment Temporary reset after Aria2, Curl, Wget, Powershell-Core and Python installations...
 $env:Path = [System.Environment]::GetEnvironmentVariable('Path', 'Machine') + ';' + [System.Environment]::GetEnvironmentVariable('Path', 'User')
-# This will be changed if certain specific issues occure on diffrent windows versions that does not support this method
+
 
 # Update pip and install Python packages
 $pythonPackages = @('tk', 'ttkthemes', 'psutil', 'wmi', 'urllib3', 'pywin32', 'pypiwin32')
@@ -317,8 +320,13 @@ Get-NexTool
 if ($null -ne $python311Version) {
     & 'C:\Python311\python.exe' 'C:\NexTool\NexTool.py'
 }
+elseif ($null -ne $python312Version) {
+    & 'C:\Python312\python' 'C:\NexTool\NexTool.py'
+}
 else {
-    python 'C:\NexTool\NexTool.py'
+    Write-Output 'Neither Python 3.11 nor 3.12 detected. Please ensure Python is installed to run NexTool.py.'
+    "$_" | Out-File $errorLog -Append
+    exit
 }
 
 # Cleanup
