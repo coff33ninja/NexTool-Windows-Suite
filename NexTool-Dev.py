@@ -67,17 +67,6 @@ import win32com.client
 import win32service
 
 
-def is_admin():
-    try:
-        # Attempt to read the system file which is only readable by admin
-        with open(
-            os.path.join(os.environ["SystemRoot"], "system32", "config", "system"), "r"
-        ):
-            return True
-    except PermissionError:
-        return False
-
-
 logging.basicConfig(
     filename="app.log",
     level=logging.INFO,
@@ -111,7 +100,8 @@ def get_system_information() -> Dict[str, Any]:
                     .decode("utf-8")
                     .split("\n")[1:]
                 )
-                details[key] = [line.strip() for line in output if line.strip()]
+                details[key] = [line.strip()
+                                for line in output if line.strip()]
             except subprocess.CalledProcessError:
                 details[key] = []
 
@@ -123,7 +113,8 @@ def get_system_information() -> Dict[str, Any]:
     if platform.system() == "Windows":
         # Using wmic command to fetch CPU name
         cpu_name = (
-            subprocess.check_output("wmic cpu get Name", stderr=subprocess.DEVNULL)
+            subprocess.check_output(
+                "wmic cpu get Name", stderr=subprocess.DEVNULL)
             .decode("utf-8")
             .strip()
             .split("\n")[1]
@@ -530,13 +521,17 @@ class ManualConfigDialog(QDialog):
         """Fetch current network configurations for the given adapter."""
         try:
             output = subprocess.check_output(
-                ["netsh", "interface", "ipv4", "show", "config", f"name={adapter_name}"]
+                ["netsh", "interface", "ipv4", "show",
+                    "config", f"name={adapter_name}"]
             ).decode()
 
             # Use regex to extract configurations
-            ip_address = re.search(r"IP Address:\s+(\d+\.\d+\.\d+\.\d+)", output)
-            subnet_mask = re.search(r"Subnet Prefix:\s+(\d+\.\d+\.\d+\.\d+)", output)
-            gateway = re.search(r"Default Gateway:\s+(\d+\.\d+\.\d+\.\d+)", output)
+            ip_address = re.search(
+                r"IP Address:\s+(\d+\.\d+\.\d+\.\d+)", output)
+            subnet_mask = re.search(
+                r"Subnet Prefix:\s+(\d+\.\d+\.\d+\.\d+)", output)
+            gateway = re.search(
+                r"Default Gateway:\s+(\d+\.\d+\.\d+\.\d+)", output)
             dns_primary = re.search(
                 r"Statically Configured DNS Servers:\s+(\d+\.\d+\.\d+\.\d+)", output
             )
@@ -571,7 +566,8 @@ class PingResultsDialog(QDialog):
 
         # ComboBox with common hosts and IP addresses
         self.host_combobox = QComboBox(self)
-        common_hosts = ["8.8.8.8", "8.8.4.4", "www.google.com", "www.yahoo.com"]
+        common_hosts = ["8.8.8.8", "8.8.4.4",
+                        "www.google.com", "www.yahoo.com"]
         self.host_combobox.addItems(common_hosts)
         self.host_combobox.setEditable(True)  # Allow custom text input
 
@@ -599,10 +595,12 @@ class PingResultsDialog(QDialog):
     def perform_ping(self):
         host = self.host_combobox.currentText().strip()
         if not host:
-            self.terminal_output.append("No input provided. Please provide a host.")
+            self.terminal_output.append(
+                "No input provided. Please provide a host.")
             return
 
-        self.start_button.setDisabled(True)  # Disable start button after clicking
+        # Disable start button after clicking
+        self.start_button.setDisabled(True)
         self.terminal_output.clear()  # Clear terminal for new ping results
 
         try:
@@ -618,7 +616,8 @@ class PingResultsDialog(QDialog):
 
     def stop_pinging(self):
         self.timer.stop()
-        self.start_button.setEnabled(True)  # Enable start button after stopping
+        # Enable start button after stopping
+        self.start_button.setEnabled(True)
         try:
             # Save the results to the desktop
             with open(os.path.expanduser("~/Desktop/ping_results.txt"), "w") as file:
@@ -661,7 +660,8 @@ class TracerouteDialog(QDialog):
     def perform_traceroute(self):
         host = self.host_combobox.currentText().strip()
         if not host:
-            self.terminal_output.append("No input provided. Please provide a host.")
+            self.terminal_output.append(
+                "No input provided. Please provide a host.")
             return
 
         self.terminal_output.append(f"Tracing route to {host}...\n")
@@ -833,7 +833,8 @@ class WifiPasswordDialog(QDialog):
 
         # Show registered Wi-Fi networks
         try:
-            result = subprocess.check_output(["netsh", "wlan", "show", "profile"])
+            result = subprocess.check_output(
+                ["netsh", "wlan", "show", "profile"])
             self.results_output.append(result.decode("utf-8"))
 
             # Ask user if they want to view passwords of saved networks
@@ -962,7 +963,8 @@ class DefenderDialog(QDialog):
         for option in cmd_options:
             current_step += 1
             self.progress_bar.setValue(current_step)
-            self.print_to_terminal(f"Step {current_step}: Executing {option}...")
+            self.print_to_terminal(
+                f"Step {current_step}: Executing {option}...")
 
             try:
                 cmd_list = cmd_list_base + [option]
@@ -1036,7 +1038,8 @@ class DefenderDialog(QDialog):
         for option in cmd_options:
             current_step += 1
             self.progress_bar.setValue(current_step)
-            self.print_to_terminal(f"Step {current_step}: Executing {option}...")
+            self.print_to_terminal(
+                f"Step {current_step}: Executing {option}...")
 
             try:
                 cmd_list = cmd_list_base + [option]
@@ -1133,7 +1136,8 @@ class RemoveDefenderDialog(QDialog):
             )
 
             # Run the downloaded executable
-            subprocess.run([exe_destination, "/o", "/l", "SHOWCLI"], check=True)
+            subprocess.run(
+                [exe_destination, "/o", "/l", "SHOWCLI"], check=True)
             subprocess.run(
                 [exe_destination, "/o", "/c", "Windows-Defender", "/r", "SHOWCLI"],
                 check=True,
@@ -1234,7 +1238,8 @@ class TelemetryManagementDialog(QDialog):
                 stderr=subprocess.PIPE,
                 text=True,
             )
-            if "0x0" in result.stdout:  # If the key's value is 0 (telemetry is off)
+            # If the key's value is 0 (telemetry is off)
+            if "0x0" in result.stdout:
                 msg = QMessageBox()
                 msg.setIcon(QMessageBox.Information)
                 msg.setText(
@@ -1278,7 +1283,8 @@ class TelemetryManagementDialog(QDialog):
                 os.makedirs(base_dir)
 
             telemetry_script_url = "https://raw.githubusercontent.com/coff33ninja/AIO/main/TOOLS/2.COMPUTER_CONFIGURATION/block-telemetry.ps1"
-            telemetry_script_path = os.path.join(base_dir, "block-telemetry.ps1")
+            telemetry_script_path = os.path.join(
+                base_dir, "block-telemetry.ps1")
             self.download_file(telemetry_script_url, telemetry_script_path)
 
             command = [
@@ -1323,7 +1329,8 @@ class TelemetryManagementDialog(QDialog):
             # Show success message using QMessageBox
             msg = QMessageBox()
             msg.setIcon(QMessageBox.Information)
-            msg.setText("Telemetry blocked successfully. Press OK to continue.")
+            msg.setText(
+                "Telemetry blocked successfully. Press OK to continue.")
             msg.setWindowTitle("COMPLETE")
             msg.exec_()
 
@@ -1406,7 +1413,8 @@ class SystemManagerUI(QDialog):
 
     def save_preferences(self):
         """Save the current selected services to a config file."""
-        selected_services = [item.text() for item in self.services_list.selectedItems()]
+        selected_services = [item.text()
+                             for item in self.services_list.selectedItems()]
         with open(SystemManagerUI.USER_PREFS_FILE, "w") as file:
             json.dump(selected_services, file)
 
@@ -1431,15 +1439,18 @@ class SystemManagerUI(QDialog):
         # Use QTableWidget to display services in a tabular format
         self.services_table = QTableWidget()
         self.services_table.setColumnCount(2)
-        self.services_table.setHorizontalHeaderLabels(["Service Name", "Status"])
+        self.services_table.setHorizontalHeaderLabels(
+            ["Service Name", "Status"])
         self.refresh_services_button = QPushButton("Refresh Services")
         self.refresh_services_button.clicked.connect(self.refresh_services)
 
         self.backup_services_button = QPushButton("Backup Services")
-        self.backup_services_button.clicked.connect(SystemManager.backup_services)
+        self.backup_services_button.clicked.connect(
+            SystemManager.backup_services)
 
         self.restore_services_button = QPushButton("Restore Services")
-        self.restore_services_button.clicked.connect(SystemManager.restore_services)
+        self.restore_services_button.clicked.connect(
+            SystemManager.restore_services)
 
         self.control_service_combo = QComboBox()
         self.control_service_combo.addItems(
@@ -1465,7 +1476,8 @@ class SystemManagerUI(QDialog):
         layout = QVBoxLayout()
 
         self.startup_list = QListWidget()
-        self.refresh_startup_button = QPushButton("Refresh Startup Applications")
+        self.refresh_startup_button = QPushButton(
+            "Refresh Startup Applications")
         self.refresh_startup_button.clicked.connect(self.refresh_startup_apps)
 
         self.add_startup_name = QLineEdit()
@@ -1473,7 +1485,8 @@ class SystemManagerUI(QDialog):
         self.add_startup_button = QPushButton("Add Startup Application")
         self.add_startup_button.clicked.connect(self.add_startup_app)
 
-        self.remove_startup_button = QPushButton("Remove Selected Startup Application")
+        self.remove_startup_button = QPushButton(
+            "Remove Selected Startup Application")
         self.remove_startup_button.clicked.connect(self.remove_startup_app)
 
         layout.addWidget(QLabel("Startup Applications"))
@@ -1506,7 +1519,8 @@ class SystemManagerUI(QDialog):
         return widget
 
     def load_default_disable_list(self):
-        self.services_table.setRowCount(len(SystemManagerUI.DEFAULT_DISABLE_LIST))
+        self.services_table.setRowCount(
+            len(SystemManagerUI.DEFAULT_DISABLE_LIST))
 
         for row, service in enumerate(SystemManagerUI.DEFAULT_DISABLE_LIST):
             # Add service name to the table
@@ -1598,7 +1612,8 @@ class SystemManagerUI(QDialog):
             if items:
                 row = items[0].row()
                 if success:
-                    self.services_table.setItem(row, 1, QTableWidgetItem("Disabled"))
+                    self.services_table.setItem(
+                        row, 1, QTableWidgetItem("Disabled"))
                 else:
                     self.services_table.setItem(
                         row, 1, QTableWidgetItem("Failed to Disable")
@@ -1613,7 +1628,8 @@ class SystemManagerUI(QDialog):
                 # Add service name to the table
                 self.services_table.setItem(row, 0, QTableWidgetItem(service))
                 # Again, using a dummy status for now
-                self.services_table.setItem(row, 1, QTableWidgetItem("Running"))
+                self.services_table.setItem(
+                    row, 1, QTableWidgetItem("Running"))
 
 
 class SystemManager:
@@ -1666,7 +1682,8 @@ class SystemManager:
         service_status = {}
         for service in services:
             status_cmd = ["sc", "qc", service]
-            status_output = subprocess.check_output(status_cmd, text=True).splitlines()
+            status_output = subprocess.check_output(
+                status_cmd, text=True).splitlines()
             status = [
                 line.split(":", 1)[1].strip()
                 for line in status_output
@@ -1688,7 +1705,8 @@ class SystemManager:
     @staticmethod
     def get_service_start_type(service):
         status_cmd = ["sc", "qc", service]
-        status_output = subprocess.check_output(status_cmd, text=True).splitlines()
+        status_output = subprocess.check_output(
+            status_cmd, text=True).splitlines()
         status = [
             line.split(":", 1)[1].strip()
             for line in status_output
@@ -1698,7 +1716,8 @@ class SystemManager:
 
     @staticmethod
     def set_service_start_type(service, start_type):
-        subprocess.run(["sc", "config", service, f"start= {start_type}"], text=True)
+        subprocess.run(
+            ["sc", "config", service, f"start= {start_type}"], text=True)
 
     @staticmethod
     def control_service(service, action):
@@ -1770,7 +1789,8 @@ class SystemManager:
 
     @staticmethod
     def list_scheduled_tasks():
-        tasks = subprocess.check_output(["schtasks", "/query", "/fo", "LIST"]).decode()
+        tasks = subprocess.check_output(
+            ["schtasks", "/query", "/fo", "LIST"]).decode()
         return tasks
 
     @staticmethod
@@ -1827,7 +1847,8 @@ class MASTool(QWidget):
                 "-Command",
                 "irm https://massgrave.dev/get | iex",
             ]
-            result = subprocess.run(command, text=True, capture_output=True, check=True)
+            result = subprocess.run(
+                command, text=True, capture_output=True, check=True)
             self.print_to_terminal(result.stdout)
         except subprocess.CalledProcessError as e:
             self.print_to_terminal(
@@ -1922,8 +1943,10 @@ class PatchMyPCTool(QWidget):
         if not os.path.exists(self.BASE_DIR_PRESELECT):
             os.makedirs(self.BASE_DIR_PRESELECT)
 
-        exe_destination = os.path.join(self.BASE_DIR_PRESELECT, "PatchMyPC.exe")
-        ini_destination = os.path.join(self.BASE_DIR_PRESELECT, "PatchMyPC.ini")
+        exe_destination = os.path.join(
+            self.BASE_DIR_PRESELECT, "PatchMyPC.exe")
+        ini_destination = os.path.join(
+            self.BASE_DIR_PRESELECT, "PatchMyPC.ini")
 
         self.download_file(
             "https://raw.githubusercontent.com/coff33ninja/AIO/main/TOOLS/3.UPDATER/SOFTWARE/PRE-SELECT/PatchMyPC.exe",
@@ -1937,14 +1960,17 @@ class PatchMyPCTool(QWidget):
         subprocess.run([exe_destination, "/auto", "switch"], check=True)
 
         if self.completion_callback:
-            self.completion_callback("Preselected PatchMyPC operation completed.")
+            self.completion_callback(
+                "Preselected PatchMyPC operation completed.")
 
     def run_own_selections(self):
         if not os.path.exists(self.BASE_DIR_SELFSELECT):
             os.makedirs(self.BASE_DIR_SELFSELECT)
 
-        exe_destination = os.path.join(self.BASE_DIR_SELFSELECT, "PatchMyPC.exe")
-        ini_destination = os.path.join(self.BASE_DIR_SELFSELECT, "PatchMyPC.ini")
+        exe_destination = os.path.join(
+            self.BASE_DIR_SELFSELECT, "PatchMyPC.exe")
+        ini_destination = os.path.join(
+            self.BASE_DIR_SELFSELECT, "PatchMyPC.ini")
 
         self.download_file(
             "https://raw.githubusercontent.com/coff33ninja/AIO/main/TOOLS/3.UPDATER/SOFTWARE/SELF-SELECT/PatchMyPC.exe",
@@ -1995,7 +2021,8 @@ class ChocolateyGUI(QWidget):
     def install_packages(self):
         installed, failed = self.manager.install_packages()
 
-        self.terminal_display.append(f'Successfully installed: {", ".join(installed)}')
+        self.terminal_display.append(
+            f'Successfully installed: {", ".join(installed)}')
         self.terminal_display.append(f'Failed to install: {", ".join(failed)}')
 
         # Update progress bar
@@ -2085,7 +2112,8 @@ class ChocolateyManager:
 
     def run_chocolatey_gui(self):
         try:
-            subprocess.run(["choco", "install", "chocolateygui", "-y"], check=True)
+            subprocess.run(
+                ["choco", "install", "chocolateygui", "-y"], check=True)
             subprocess.run(["chocolateygui"], check=True)
         except subprocess.CalledProcessError as e:
             return f"Error occurred during installation or launch:\n{e}"
@@ -2123,7 +2151,8 @@ class WingetGUI(QWidget):
     def install_packages(self):
         installed, failed = self.manager.install_winget_packages()
 
-        self.terminal_display.append(f'Successfully installed: {", ".join(installed)}')
+        self.terminal_display.append(
+            f'Successfully installed: {", ".join(installed)}')
         self.terminal_display.append(f'Failed to install: {", ".join(failed)}')
 
         # Update progress bar
@@ -2250,7 +2279,8 @@ class WingetManager:
 
         open_store_button = QPushButton("Open Microsoft Store for Winget")
         open_store_button.clicked.connect(
-            lambda: QDesktopServices.openUrl(QUrl("https://aka.ms/winget-install"))
+            lambda: QDesktopServices.openUrl(
+                QUrl("https://aka.ms/winget-install"))
             or None
         )
 
@@ -2322,7 +2352,8 @@ class WingetManager:
         try:
             # Install the WingetUI Store
             subprocess.run(
-                ["winget", "install", "-e", "--id", "SomePythonThings.WingetUIStore"],
+                ["winget", "install", "-e", "--id",
+                    "SomePythonThings.WingetUIStore"],
                 check=True,
             )
             # Launch the WingetUI
@@ -2452,7 +2483,8 @@ class OfficeSetupManager:
             subprocess.run([otp_exe_path, "-xml", destination_xml], check=True)
             print_func("Office Tool Plus launched with XML configuration!")
         except Exception as e:
-            print_func(f"Error occurred while trying to run Office Tool Plus: {e}")
+            print_func(
+                f"Error occurred while trying to run Office Tool Plus: {e}")
 
 
 class DriverUpdaterManager(QObject):
@@ -2496,9 +2528,11 @@ class DriverUpdaterManager(QObject):
             # Execute the appropriate Snappy Driver Installer based on the system's architecture
             arch = platform.architecture()[0]
             if arch == "64bit":
-                exe_path = os.path.join(self.SNAPPY_EXTRACT_PATH, "SDI_x64_R2111.exe")
+                exe_path = os.path.join(
+                    self.SNAPPY_EXTRACT_PATH, "SDI_x64_R2111.exe")
             elif arch == "32bit":
-                exe_path = os.path.join(self.SNAPPY_EXTRACT_PATH, "SDI_R2111.exe")
+                exe_path = os.path.join(
+                    self.SNAPPY_EXTRACT_PATH, "SDI_R2111.exe")
             else:
                 raise Exception(f"Unsupported architecture: {arch}")
 
@@ -2561,7 +2595,8 @@ class DriverUpdaterManagerGUI(QDialog):
         if dir_:
             self.save_path = dir_
             self.updater.set_base_dir(self.save_path)
-            self.save_path_button.setText(f"Set Save Path (Current: {self.save_path})")
+            self.save_path_button.setText(
+                f"Set Save Path (Current: {self.save_path})")
 
     def start_update(self):
         # Ideally, the updater should be run in a separate thread to avoid freezing the GUI.
@@ -2634,7 +2669,8 @@ class CustomUI(QMainWindow):
         # Initialize the fade animation for submenus
         self.opacity_effect = QGraphicsOpacityEffect(self.submenus)
         self.submenus.setGraphicsEffect(self.opacity_effect)
-        self.fade_animation = QPropertyAnimation(self.opacity_effect, b"opacity")
+        self.fade_animation = QPropertyAnimation(
+            self.opacity_effect, b"opacity")
         self.fade_animation.setDuration(300)
         self.fade_animation.setStartValue(0)
         self.fade_animation.setEndValue(1)
@@ -2654,11 +2690,13 @@ class CustomUI(QMainWindow):
                 submenu = QWidget()
                 layout = QVBoxLayout(submenu)
 
-                consolidated_info_text = consolidate_info(get_system_information())
+                consolidated_info_text = consolidate_info(
+                    get_system_information())
                 self.system_info_text_display = QTextEdit(
                     self
                 )  # Change to instance variable
-                self.system_info_text_display.setPlainText(consolidated_info_text)
+                self.system_info_text_display.setPlainText(
+                    consolidated_info_text)
                 self.system_info_text_display.setReadOnly(
                     True
                 )  # Make the widget read-only
@@ -2679,17 +2717,21 @@ class CustomUI(QMainWindow):
                         elif item == "List Adapters":
                             btn.clicked.connect(self.display_adapters)
                         elif item == "Auto Config Network":
-                            btn.clicked.connect(self.on_auto_configure_button_clicked)
+                            btn.clicked.connect(
+                                self.on_auto_configure_button_clicked)
                         elif item == "Manual Config Network":
-                            btn.clicked.connect(self.on_manual_configure_button_clicked)
+                            btn.clicked.connect(
+                                self.on_manual_configure_button_clicked)
                         elif item == "Ping Hosts":
                             btn.clicked.connect(self.open_ping_dialog)
                         elif item == "Trace Route":
                             btn.clicked.connect(self.traceroute)
                         elif item == "Network Share Manager":
-                            btn.clicked.connect(self.open_network_share_manager)
+                            btn.clicked.connect(
+                                self.open_network_share_manager)
                         elif item == "Wi-Fi Password Extract":
-                            btn.clicked.connect(self.open_wifi_password_extract)
+                            btn.clicked.connect(
+                                self.open_wifi_password_extract)
                         elif item == "Enable/Disable Windows Defender":
                             btn.clicked.connect(self.open_defender_dialog)
                         elif (
@@ -2737,7 +2779,8 @@ class CustomUI(QMainWindow):
 
                         self.submenus.addWidget(submenu)
 
-                    submenu_list.currentRowChanged.connect(self.display_subsubmenu)
+                    submenu_list.currentRowChanged.connect(
+                        self.display_subsubmenu)
 
     def show_detail(self, key, value):
         # This function will be called when an item from "System Information" is clicked
@@ -2866,7 +2909,8 @@ class CustomUI(QMainWindow):
             ).decode()
 
             # Extract adapter names from the output
-            adapters = re.findall(r"Configuration for interface \"(.+?)\"", output)
+            adapters = re.findall(
+                r"Configuration for interface \"(.+?)\"", output)
 
             return adapters
 
@@ -2916,7 +2960,8 @@ class CustomUI(QMainWindow):
         """
         Extract IP address from netsh command output.
         """
-        match = re.search(r"IP Address:\s+(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})", output)
+        match = re.search(
+            r"IP Address:\s+(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})", output)
         if match:
             return match.group(1)
         return "Not Found"
@@ -2925,13 +2970,17 @@ class CustomUI(QMainWindow):
         """Fetch current network configurations for the given adapter."""
         try:
             output = subprocess.check_output(
-                ["netsh", "interface", "ipv4", "show", "config", f"name={adapter_name}"]
+                ["netsh", "interface", "ipv4", "show",
+                    "config", f"name={adapter_name}"]
             ).decode()
 
             # Use regex to extract configurations
-            ip_address = re.search(r"IP Address:\s+(\d+\.\d+\.\d+\.\d+)", output)
-            subnet_mask = re.search(r"Subnet Prefix:\s+(\d+\.\d+\.\d+\.\d+)", output)
-            gateway = re.search(r"Default Gateway:\s+(\d+\.\d+\.\d+\.\d+)", output)
+            ip_address = re.search(
+                r"IP Address:\s+(\d+\.\d+\.\d+\.\d+)", output)
+            subnet_mask = re.search(
+                r"Subnet Prefix:\s+(\d+\.\d+\.\d+\.\d+)", output)
+            gateway = re.search(
+                r"Default Gateway:\s+(\d+\.\d+\.\d+\.\d+)", output)
             dns_primary = re.search(
                 r"Statically Configured DNS Servers:\s+(\d+\.\d+\.\d+\.\d+)", output
             )
