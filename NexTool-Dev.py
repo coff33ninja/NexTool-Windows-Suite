@@ -26,7 +26,6 @@ from PyQt5.QtWidgets import (
     QCheckBox,
     QTabWidget,
     QWidget,
-    QListWidgetItem,
     QTableWidget,
     QTableWidgetItem,
     QFileDialog,
@@ -44,8 +43,8 @@ from PyQt5.QtCore import (
     QTimer,
     QItemSelectionModel,
     pyqtSignal,
-    QThread,
     QUrl,
+    QObject,
 )
 
 # from PyQt5.QtGui import QGraphicsOpacityEffect
@@ -54,7 +53,7 @@ import traceback
 import psutil
 import datetime
 import re
-from typing import Any, Union, Dict, List
+from typing import Any, Union, Dict, List, Optional, Callable
 from functools import partial
 import json
 import winreg as reg
@@ -2489,8 +2488,10 @@ class OfficeSetupManager:
 
 class DriverUpdaterManager(QObject):
     finished = pyqtSignal()
+    message_signal = pyqtSignal(str)
+    progress_signal = pyqtSignal(int)
 
-    def __init__(self, print_func):
+    def __init__(self, print_func: Callable[[str], None]):
         super().__init__()
         self.BASE_DIR = "C:\\NexTool\\Updater"
         self.SNAPPY_URL = "https://raw.githubusercontent.com/coff33ninja/AIO/main/TOOLS/3.UPDATER/SNAPPY_DRIVER.zip"
@@ -2505,56 +2506,81 @@ class DriverUpdaterManager(QObject):
         self.BASE_DIR = new_base_dir
         self.update_paths()
 
-    def download_file(self, url, destination):
+    def ensure_directory_exists(self, print_func: Callable[[str], None]):
+        if not os.path.exists(self.BASE_DIR):
+            os.makedirs(self.BASE_DIR)
+            self.print_func(f"Directory {self.BASE_DIR} created.")
+        else:
+            self.print_func(f"Directory {self.BASE_DIR} already exists.")
+
+    def download_driver(self):
+        # Download the Snappy Driver zip file
+        self.download_file(self.SNAPPY_URL, self.SNAPPY_ZIP_PATH)
+
+    def download_file(self, url: str, destination: str) -> None:
         try:
-            urllib.request.urlretrieve(url, destination)
-            self.print_func(f"Downloaded file from {url} to {destination}.")
+            response = requests.get(url, stream=True)
+            total_size = int(response.headers.get('content-length', 0))
+
+            with open(destination, 'wb') as f:
+                for data in response.iter_content(8192):
+                    f.write(data)
+                    downloaded_size = f.tell()
+                    progress = int((downloaded_size / total_size) * 50)  # Assuming download is 50% of the total process
+                    self.progress_signal.emit(progress)
+
+            self.message_signal.emit(f"Downloaded file from {url} to {destination}.")
+
         except Exception as e:
-            self.print_func(f"Error downloading {url}: {e}")
+            self.message_signal.emit(f"Error downloading {url}: {e}")
+
+    def extract_driver(self):
+        # Extract the downloaded zip
+        with zipfile.ZipFile(self.SNAPPY_ZIP_PATH, "r") as zip_ref:
+            total_files = len(zip_ref.infolist())
+            for index, file in enumerate(zip_ref.infolist()):
+                zip_ref.extract(file, self.SNAPPY_EXTRACT_PATH)
+                progress = 50 + int((index / total_files) * 50)
+                self.progress_signal.emit(progress)
+
+    def install_driver(self):
+        # Execute the appropriate Snappy Driver Installer based on system's architecture
+        arch = platform.architecture()[0]
+        if arch == "64bit":
+            exe_path = os.path.join(self.SNAPPY_EXTRACT_PATH, "SDI_x64_R2111.exe")
+        elif arch == "32bit":
+            exe_path = os.path.join(self.SNAPPY_EXTRACT_PATH, "SDI_R2111.exe")
+        else:
+            raise Exception(f"Unsupported architecture: {arch}")
+
+        subprocess.run([exe_path, "-checkupdates", "-autoupdate", "-autoclose"], check=True)
 
     def run(self):
-        self.print_func("RUNNING DRIVER UPDATER...")
+        self.message_signal.emit("RUNNING DRIVER UPDATER...")
         try:
-            if not os.path.exists(self.BASE_DIR):
-                os.makedirs(self.BASE_DIR)
-
-            # Download the Snappy Driver zip file
-            self.download_file(self.SNAPPY_URL, self.SNAPPY_ZIP_PATH)
-
-            # Extract the downloaded zip
-            with zipfile.ZipFile(self.SNAPPY_ZIP_PATH, "r") as zip_ref:
-                zip_ref.extractall(self.SNAPPY_EXTRACT_PATH)
-
-            # Execute the appropriate Snappy Driver Installer based on the system's architecture
-            arch = platform.architecture()[0]
-            if arch == "64bit":
-                exe_path = os.path.join(
-                    self.SNAPPY_EXTRACT_PATH, "SDI_x64_R2111.exe")
-            elif arch == "32bit":
-                exe_path = os.path.join(
-                    self.SNAPPY_EXTRACT_PATH, "SDI_R2111.exe")
-            else:
-                raise Exception(f"Unsupported architecture: {arch}")
-
-            subprocess.run(
-                [exe_path, "-checkupdates", "-autoupdate", "-autoclose"],
-                check=True,
-            )
-            self.print_func("Driver update completed!")
+            self.ensure_directory_exists(self.print_func)
+            self.download_driver()
+            self.extract_driver()
+            self.install_driver()
+            # Optionally, delete the downloaded ZIP after the update
+            os.remove(self.SNAPPY_ZIP_PATH)
+            self.message_signal.emit("Driver update completed!")
         except Exception as e:
-            self.print_func(f"Error occurred: {e}")
+            self.message_signal.emit(f"Error occurred: {e}")
         self.finished.emit()
 
 
 class DriverUpdaterManagerGUI(QDialog):
     def __init__(self, print_func):
         super().__init__()
-        self.thread = None
+
+        self.thread: Optional[QThread] = None
         self.updater = DriverUpdaterManager(self.print_to_terminal)
 
         # Default save path
         self.save_path = "C:\\NexTool\\Updater"
         self.updater.finished.connect(self.on_updater_finished)
+        self.updater.message_signal.connect(self.print_to_terminal)
         self.init_ui()
 
     def init_ui(self):
@@ -2567,6 +2593,8 @@ class DriverUpdaterManagerGUI(QDialog):
 
         # Progress bar
         self.progress_bar = QProgressBar(self)
+        self.progress_bar.setRange(0, 100)  # 0% to 100%
+        self.updater.progress_signal.connect(self.update_progress_bar)
         layout.addWidget(self.progress_bar)
 
         # Save Path button
@@ -2580,6 +2608,11 @@ class DriverUpdaterManagerGUI(QDialog):
         self.start_button = QPushButton("Start Driver Update", self)
         self.start_button.clicked.connect(self.start_update)
         layout.addWidget(self.start_button)
+
+        # Stop Button
+        self.stop_button = QPushButton("Stop Update", self)
+        self.stop_button.clicked.connect(self.stop_update)
+        layout.addWidget(self.stop_button)
 
         self.setLayout(layout)
         self.setWindowTitle("Driver Updater GUI")
@@ -2598,20 +2631,42 @@ class DriverUpdaterManagerGUI(QDialog):
             self.save_path_button.setText(
                 f"Set Save Path (Current: {self.save_path})")
 
+    def enable_start_button(self):
+        self.start_button.setEnabled(True)
+
     def start_update(self):
-        # Ideally, the updater should be run in a separate thread to avoid freezing the GUI.
+        if self.thread and self.thread.isRunning():
+            self.print_to_terminal("Updater is already running!")
+            return
+
         self.start_button.setEnabled(False)
+        self.save_path_button.setEnabled(False)
         self.thread = QThread()
         self.updater.moveToThread(self.thread)
         self.thread.started.connect(self.updater.run)
         self.thread.finished.connect(self.thread.deleteLater)
-        self.thread.finished.connect(self.start_button.setEnabled)
+        self.thread.finished.connect(self.enable_start_button)
         self.thread.start()
+
+    def stop_update(self):
+        if self.thread and self.thread.isRunning():
+            self.thread.terminate()
+            self.print_to_terminal("Updater terminated!")
+
+    def update_progress_bar(self, value):
+        self.progress_bar.setValue(value)
 
     def on_updater_finished(self):
         # This method will be called when the updater is done
         self.start_button.setEnabled(True)
+        if self.thread:
+            self.thread.quit()
 
+    def closeEvent(self, event):
+        self.save_path_button.setEnabled(True)
+        if self.thread and self.thread.isRunning():
+            self.thread.terminate()
+        event.accept()
 
 class CustomUI(QMainWindow):
     def __init__(self):
@@ -2754,7 +2809,7 @@ class CustomUI(QMainWindow):
                         elif item == "Winget":
                             btn.clicked.connect(self.launch_winget_gui)
                         elif item == "Office Instalations":
-                            btn.clicked.connect(self.launch_office_installer)
+                            btn.clicked.connect(self.launch_Office_Setup_Dialog)
                         elif item == "Snappy Driver":
                             btn.clicked.connect(self.launch_driver_updater)
 
@@ -3233,7 +3288,7 @@ class CustomUI(QMainWindow):
 
     def execute_windows_update(self):
         updater = WindowsUpdaterTool()
-        updater.run_update(self.update_callback)
+        updater.run_update()
 
     def launch_patchmypc_tool(self):
         self.patchmypc_tool = PatchMyPCTool()
@@ -3247,11 +3302,12 @@ class CustomUI(QMainWindow):
         self.winget_gui = WingetGUI()
         self.winget_gui.show()
 
-    def OfficeSetupDialog(self):
+    def launch_Office_Setup_Dialog(self):
         dialog = OfficeSetupDialog()
         dialog.exec_()
 
     def launch_driver_updater(self):
+        print("Launching Driver Updater...")
         dialog = DriverUpdaterManagerGUI(self)
         dialog.exec_()
 
