@@ -42,7 +42,7 @@ choco --version > nul 2>&1
 if errorlevel 1 (
     echo Chocolatey not detected. Attempting installation... >> %LOGFILE%
     @powershell -NoProfile -ExecutionPolicy Bypass -Command "iex (((new-object net.webclient).DownloadString('https://chocolatey.org/install.ps1')))" && SET "PATH=%PATH%;%ALLUSERSPROFILE%\chocolatey\bin"
-    FOR /F "delims=" %%i in ('choco --version 2^>^&1') do set CHOCO_VERSION=%%i
+    FOR /F "tokens=*" %%i in ('choco --version') do set CHOCO_VERSION=%%i
     IF NOT DEFINED CHOCO_VERSION (
         echo %date% %time% - Error: Failed to install Chocolatey! >> %LOGFILE%
         exit /B
@@ -50,7 +50,7 @@ if errorlevel 1 (
         echo Chocolatey version: %CHOCO_VERSION% >> %LOGFILE%
     )
 ) ELSE (
-    FOR /F "delims=" %%i in ('choco --version 2^>^&1') do set CHOCO_VERSION=%%i
+    FOR /F "tokens=*" %%i in ('choco --version') do set CHOCO_VERSION=%%i
     echo Chocolatey version: %CHOCO_VERSION% already installed >> %LOGFILE%
 )
 
@@ -58,17 +58,17 @@ if errorlevel 1 (
 
 :CheckAria2c
 echo %date% %time% - Checking aria2c installation >> %LOGFILE%
-FOR /F "delims=" %%i in ('aria2c --version ^| findstr "aria2 version"') do set ARIA2C_VERSION=%%i
+FOR /F "tokens=3" %%i in ('aria2c --version ^| findstr "aria2 version"') do set ARIA2C_VERSION=%%i
 IF NOT DEFINED ARIA2C_VERSION (
     echo aria2c not detected. Installing... >> %LOGFILE%
-    choco install -y -n
+    choco install aria2 -y -n
 ) ELSE (
     echo aria2c version: %ARIA2C_VERSION% already installed >> %LOGFILE%
 )
 
 :CheckWget
 echo %date% %time% - Checking wget installation >> %LOGFILE%
-FOR /F "delims=" %%i in ('wget --version ^| findstr "GNU Wget"') do set WGET_VERSION=%%i
+FOR /F "tokens=3" %%i in ('wget --version ^| findstr "GNU Wget"') do set WGET_VERSION=%%i
 IF NOT DEFINED WGET_VERSION (
     echo wget not detected. Installing... >> %LOGFILE%
     choco install wget -y -n
@@ -122,7 +122,7 @@ echo %date% %time% - Checking for the latest version of Python >> %LOGFILE%
 choco list --local-only | find "python" > nul
 if errorlevel 1 (
     echo Latest version of Python not detected. Installing... >> %LOGFILE%
-    choco install python -y -n
+    choco install python -y -n && goto :Beginactualscriptcommands
 ) ELSE (
     echo The latest version of Python already installed >> %LOGFILE%
 )
@@ -133,85 +133,117 @@ cls
 :Beginactualscriptcommands
 
 echo Installing/upgrading pip... >> %LOGFILE%
-curl https://bootstrap.pypa.io/get-pip.py -o get-pip.py
-python get-pip.py
+python -m pip install --upgrade pip
 if errorlevel 1 (
-    echo Error: Failed to install/upgrade pip >> %LOGFILE%
-) else (
-    rem Ensure pip is updated
-    python -m pip install --upgrade pip
+    echo Error: Failed to upgrade pip. Attempting to reinstall pip... >> %LOGFILE%
+
+    curl https://bootstrap.pypa.io/get-pip.py -o get-pip.py
+    python get-pip.py
     if errorlevel 1 (
-        echo Error: Failed to upgrade pip >> %LOGFILE%
+        echo Error: Failed to install/upgrade pip >> %LOGFILE%
+        exit /b
     )
 )
 
-echo Installing/upgrading setuptools... >> %LOGFILE%
-pip install --upgrade setuptools
+echo Installing/upgrading setuptools for Python 3.12... >> %LOGFILE%
+"C:\Python312\python.exe" -m pip install --upgrade setuptools
 if errorlevel 1 (
-    echo Error: Failed to install/upgrade setuptools >> %LOGFILE%
-)
-
-echo Upgrading pip... >> %LOGFILE%
-pip install --upgrade pip
-if errorlevel 1 (
-    echo Error: Failed to upgrade pip again >> %LOGFILE%
-)
-
-echo Installing/upgrading PyQt5 tools for Python 3.12... >> %LOGFILE%
-C:\Python312\python.exe -m pip install --upgrade pyqt5-tools
-if errorlevel 1 (
-    echo Error: Failed to install/upgrade PyQt5 tools using Python 3.12 >> %LOGFILE%
-
-    echo Attempting to install/upgrade PyQt5 tools with Python 3.11... >> %LOGFILE%
-    C:\Python311\python.exe -m pip install --upgrade pyqt5-tools
+    echo Error: Failed to install/upgrade setuptools using Python 3.12 >> %LOGFILE%
+    "C:\Python311\python.exe" -m pip install --upgrade setuptools
     if errorlevel 1 (
-        echo Error: Failed to install/upgrade PyQt5 tools using Python 3.11 as well >> %LOGFILE%
-        echo You might have issues using the tool. Please consult the documentation or support. >> %LOGFILE%
+        echo Error: Failed to install/upgrade setuptools using Python 3.11 as well >> %LOGFILE%
     ) else (
-        echo Success: PyQt5 tools installed/upgraded successfully using Python 3.11 >> %LOGFILE%
-        echo Please use Python 3.11 for running the NexTool script. >> %LOGFILE%
+        echo Success: setuptools installed/upgraded successfully using Python 3.11 >> %LOGFILE%
     )
 ) ELSE (
-    echo Success: PyQt5 tools installed/upgraded successfully using Python 3.12 >> %LOGFILE%
+    echo Success: setuptools installed/upgraded successfully using Python 3.12 >> %LOGFILE%
 )
 
-echo Installing/upgrading PyQt5 tools... >> %LOGFILE%
-pip install --upgrade pyqt5-tools
+
+echo Installing/upgrading pyqt5-tools for Python 3.12... >> %LOGFILE%
+"C:\Python312\python.exe" -m pip install --upgrade pyqt5-tools
 if errorlevel 1 (
-    echo Error: Failed to install/upgrade PyQt5 tools >> %LOGFILE%
+    echo Error: Failed to install/upgrade pyqt5-tools using Python 3.12 >> %LOGFILE%
+    "C:\Python311\python.exe" -m pip install --upgrade pyqt5-tools
+    if errorlevel 1 (
+        echo Error: Failed to install/upgrade pyqt5-tools using Python 3.11 as well >> %LOGFILE%
+    ) else (
+        echo Success: pyqt5-tools installed/upgraded successfully using Python 3.11 >> %LOGFILE%
+    )
+) ELSE (
+    echo Success: pyqt5-tools installed/upgraded successfully using Python 3.12 >> %LOGFILE%
 )
 
-echo Installing/upgrading PyQt5 stubs for SVG support... >> %LOGFILE%
-pip install --upgrade PyQt5-stubs
+
+echo Installing/upgrading PyQt5-stubs for Python 3.12... >> %LOGFILE%
+"C:\Python312\python.exe" -m pip install --upgrade PyQt5-stubs
 if errorlevel 1 (
-    echo Error: Failed to install/upgrade PyQt5 stubs for SVG support >> %LOGFILE%
+    echo Error: Failed to install/upgrade PyQt5-stubs using Python 3.12 >> %LOGFILE%
+    "C:\Python311\python.exe" -m pip install --upgrade PyQt5-stubs
+    if errorlevel 1 (
+        echo Error: Failed to install/upgrade PyQt5-stubs using Python 3.11 as well >> %LOGFILE%
+    ) else (
+        echo Success: PyQt5-stubs installed/upgraded successfully using Python 3.11 >> %LOGFILE%
+    )
+) ELSE (
+    echo Success: PyQt5-stubs installed/upgraded successfully using Python 3.12 >> %LOGFILE%
 )
 
-echo Installing/upgrading pyqtgraph... >> %LOGFILE%
-pip install --upgrade pyqtgraph
+echo Installing/upgrading pyqtgraph for Python 3.12... >> %LOGFILE%
+"C:\Python312\python.exe" -m pip install --upgrade pyqtgraph
 if errorlevel 1 (
-    echo Error: Failed to install/upgrade pyqtgraph >> %LOGFILE%
+    echo Error: Failed to install/upgrade pyqtgraph using Python 3.12 >> %LOGFILE%
+    "C:\Python311\python.exe" -m pip install --upgrade pyqtgraph
+    if errorlevel 1 (
+        echo Error: Failed to install/upgrade pyqtgraph using Python 3.11 as well >> %LOGFILE%
+    ) else (
+        echo Success: pyqtgraph installed/upgraded successfully using Python 3.11 >> %LOGFILE%
+    )
+) ELSE (
+    echo Success: pyqtgraph installed/upgraded successfully using Python 3.12 >> %LOGFILE%
 )
 
-echo Installing/upgrading requests... >> %LOGFILE%
-pip install --upgrade requests
+echo Installing/upgrading requests for Python 3.12... >> %LOGFILE%
+"C:\Python312\python.exe" -m pip install --upgrade requests
 if errorlevel 1 (
-    echo Error: Failed to install/upgrade requests >> %LOGFILE%
+    echo Error: Failed to install/upgrade requests using Python 3.12 >> %LOGFILE%
+    "C:\Python311\python.exe" -m pip install --upgrade requests
+    if errorlevel 1 (
+        echo Error: Failed to install/upgrade requests using Python 3.11 as well >> %LOGFILE%
+    ) else (
+        echo Success: requests installed/upgraded successfully using Python 3.11 >> %LOGFILE%
+    )
+) ELSE (
+    echo Success: requests installed/upgraded successfully using Python 3.12 >> %LOGFILE%
 )
 
-echo Installing/upgrading psutil... >> %LOGFILE%
-pip install --upgrade psutil
+echo Installing/upgrading psutil for Python 3.12... >> %LOGFILE%
+"C:\Python312\python.exe" -m pip install --upgrade psutil
 if errorlevel 1 (
-    echo Error: Failed to install/upgrade psutil >> %LOGFILE%
+    echo Error: Failed to install/upgrade psutil using Python 3.12 >> %LOGFILE%
+    "C:\Python311\python.exe" -m pip install --upgrade psutil
+    if errorlevel 1 (
+        echo Error: Failed to install/upgrade psutil using Python 3.11 as well >> %LOGFILE%
+    ) else (
+        echo Success: psutil installed/upgraded successfully using Python 3.11 >> %LOGFILE%
+    )
+) ELSE (
+    echo Success: psutil installed/upgraded successfully using Python 3.12 >> %LOGFILE%
 )
 
-echo Installing/upgrading pywin32... >> %LOGFILE%
-pip install --upgrade pywin32
+echo Installing/upgrading pywin32 for Python 3.12... >> %LOGFILE%
+"C:\Python312\python.exe" -m pip install --upgrade pywin32
 if errorlevel 1 (
-    echo Error: Failed to install/upgrade pywin32 >> %LOGFILE%
+    echo Error: Failed to install/upgrade pywin32 using Python 3.12 >> %LOGFILE%
+    "C:\Python311\python.exe" -m pip install --upgrade pywin32
+    if errorlevel 1 (
+        echo Error: Failed to install/upgrade pywin32 using Python 3.11 as well >> %LOGFILE%
+    ) else (
+        echo Success: pywin32 installed/upgraded successfully using Python 3.11 >> %LOGFILE%
+    )
+) ELSE (
+    echo Success: pywin32 installed/upgraded successfully using Python 3.12 >> %LOGFILE%
 )
-
-echo Installation/Upgrade completed! >> %LOGFILE%
 
 :LoggPreview
 echo. >> %LOGFILE%
@@ -232,7 +264,7 @@ if /i "%user_input%"=="yes" (
     start notepad %LOGFILE%
 )
 
-cls
+cls && goto :Prompt-User
 
 :Prompt-User
 echo Please choose a branch:
@@ -261,49 +293,56 @@ echo %date% %time% - Download Script started > %LOGFILE%
 :: Define URL based on user's earlier choice of branch
 set NexToolDestination=C:\NexTool\NexTool.py
 
-:: Attempt download using pwsh (PowerShell)
-echo %date% %time% - Attempting download using PowerShell >> %LOGFILE%
-pwsh -Command "Invoke-WebRequest -Uri '%NexToolURL%' -OutFile '%NexToolDestination%'"
-if "%errorlevel%"=="0" (
-    echo %date% %time% - Download successful with PowerShell >> %LOGFILE%
-    goto :end
-) else (
-    echo %date% %time% - Download failed with PowerShell >> %LOGFILE%
-)
-
 :: Attempt download using curl
 echo %date% %time% - Attempting download using curl >> %LOGFILE%
 curl -L -o %NexToolDestination% %NexToolURL%
 if "%errorlevel%"=="0" (
-    echo %date% %time% - Download successful with curl >> %LOGFILE%
-    goto :end
+    echo %date% %time% - Download successful with curl >> %LOGFILE% && goto :TryPowerShell
 ) else (
     echo %date% %time% - Download failed with curl >> %LOGFILE%
+    goto TryPowerShell
 )
 
+:TryPowerShell
+:: Attempt download using pwsh (PowerShell)
+echo %date% %time% - Attempting download using PowerShell >> %LOGFILE%
+pwsh -Command "Invoke-WebRequest -Uri '%NexToolURL%' -OutFile '%NexToolDestination%'"
+if "%errorlevel%"=="0" (
+    echo %date% %time% - Download successful with PowerShell >> %LOGFILE% && goto :TryAria2
+) else (
+    echo %date% %time% - Download failed with PowerShell >> %LOGFILE%
+    goto TryAria2
+)
+
+:TryAria2
 :: Attempt download using aria2
 echo %date% %time% - Attempting download using aria2 >> %LOGFILE%
 aria2c -o %NexToolDestination% %NexToolURL%
 if "%errorlevel%"=="0" (
-    echo %date% %time% - Download successful with aria2 >> %LOGFILE%
-    goto :end
+    echo %date% %time% - Download successful with aria2 >> %LOGFILE% && goto :TryWget
 ) else (
     echo %date% %time% - Download failed with aria2 >> %LOGFILE%
+    goto TryWget
 )
 
+:TryWget
 :: Attempt download using wget
 echo %date% %time% - Attempting download using wget >> %LOGFILE%
 wget -O %NexToolDestination% %NexToolURL%
 if "%errorlevel%"=="0" (
-    echo %date% %time% - Download successful with wget >> %LOGFILE%
-    goto :end
+    echo %date% %time% - Download successful with wget >> %LOGFILE% && goto :end
 ) else (
     echo %date% %time% - Download failed with wget >> %LOGFILE%
 )
 
 :end
 echo %date% %time% - Download process completed >> %LOGFILE%
-echo Download complete!
+if exist "%NexToolDestination%" (
+    echo Download successful!
+) else (
+    echo Failed to download NexTool.py. Please check your internet connection or try again later.
+    echo %date% %time% - Download failed. NexTool.py not found. >> %LOGFILE%
+)
 
 goto Check-Python-Version
 
