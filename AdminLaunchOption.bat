@@ -157,10 +157,22 @@ if errorlevel 1 (
     echo Error: Failed to upgrade pip again >> %LOGFILE%
 )
 
-echo Installing/upgrading PyQt5... >> %LOGFILE%
-pip install --upgrade pyqt5
+echo Installing/upgrading PyQt5 tools for Python 3.12... >> %LOGFILE%
+C:\Python312\python.exe -m pip install --upgrade pyqt5-tools
 if errorlevel 1 (
-    echo Error: Failed to install/upgrade PyQt5 >> %LOGFILE%
+    echo Error: Failed to install/upgrade PyQt5 tools using Python 3.12 >> %LOGFILE%
+
+    echo Attempting to install/upgrade PyQt5 tools with Python 3.11... >> %LOGFILE%
+    C:\Python311\python.exe -m pip install --upgrade pyqt5-tools
+    if errorlevel 1 (
+        echo Error: Failed to install/upgrade PyQt5 tools using Python 3.11 as well >> %LOGFILE%
+        echo You might have issues using the tool. Please consult the documentation or support. >> %LOGFILE%
+    ) else (
+        echo Success: PyQt5 tools installed/upgraded successfully using Python 3.11 >> %LOGFILE%
+        echo Please use Python 3.11 for running the NexTool script. >> %LOGFILE%
+    )
+) ELSE (
+    echo Success: PyQt5 tools installed/upgraded successfully using Python 3.12 >> %LOGFILE%
 )
 
 echo Installing/upgrading PyQt5 tools... >> %LOGFILE%
