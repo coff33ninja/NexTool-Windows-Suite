@@ -3,6 +3,7 @@ import os
 import subprocess
 import platform
 import requests
+import shutil
 from PyQt5.QtWidgets import (
     QApplication,
     QMainWindow,
@@ -1192,11 +1193,6 @@ class TelemetryManagementDialog(QDialog):
         self.setWindowTitle("Telemetry Management")
         self.resize(600, 400)
 
-    def run_selected_script(self):
-        selected_script = self.combo_box.currentText()
-        if selected_script == "Run TELEMETRY Script":
-            self.run_TELEMETRY()
-
     def print_to_terminal(self, message):
         self.terminal_output.append(message)
 
@@ -1388,6 +1384,7 @@ class SystemManagerUI(QDialog):
     def init_ui(self):
         main_layout = QVBoxLayout()
         self.tab_widget = QTabWidget()
+        self.services_list = QListWidget(self)
 
         # Create tabs
         self.tab_widget.addTab(self.setup_services_ui(), "Services")
@@ -2812,6 +2809,8 @@ class CustomUI(QMainWindow):
                             btn.clicked.connect(self.launch_Office_Setup_Dialog)
                         elif item == "Snappy Driver":
                             btn.clicked.connect(self.launch_driver_updater)
+                        elif item == "Windows Install":
+                            btn.clicked.connect(self.launch_windows_installer)
 
                         # elif item == "PatchMyPC":
                         #    btn.clicked.connect(self.launch_patchmypc_tool)
@@ -3311,6 +3310,82 @@ class CustomUI(QMainWindow):
         dialog = DriverUpdaterManagerGUI(self)
         dialog.exec_()
 
+    def launch_windows_installer(self):
+        marker_file = "C:/temp/pyqt6_installed.txt"
+
+        if not os.path.exists(marker_file):
+            # Install dependencies
+            self.install_dependencies()
+
+            # Create a marker file to indicate the installation is done
+            with open(marker_file, 'w') as f:
+                f.write('PyQt6 installation completed.')
+
+        # Launch the PyQt6 script
+        self.install_dependencies()
+
+        # Download the necessary files
+        self.run_windows_install()
+
+    def install_dependencies(self):
+        try:
+            # Packages for installation
+            packages = ["PyQt6"]
+
+            for package in packages:
+                subprocess.check_call(["pip", "install", "--upgrade", package])
+
+            QMessageBox.information(self, "Success", "Dependencies installed/updated successfully!")
+        except Exception as e:
+            QMessageBox.warning(self, "Error", f"Failed to install/update dependencies. Error: {e}")
+
+    def run_windows_install(self):
+        self.print_to_terminal("Starting Windows Installation Process...")
+
+        # Define the base directory and ensure it exists
+        base_dir = "C:\\NexTool\\Advanced\\Windows-Install"
+        if not os.path.exists(base_dir):
+            os.makedirs(base_dir)
+
+        # List of files you want to download
+        file_urls = {
+            "https://raw.githubusercontent.com/coff33ninja/NexTool-Windows-Suite/main/Modules/Windows-Install/main_app.py": "main_app.py",
+            "https://raw.githubusercontent.com/coff33ninja/NexTool-Windows-Suite/main/Modules/Windows-Install/deployment_manager.py": "deployment_manager.py",
+            "https://raw.githubusercontent.com/coff33ninja/NexTool-Windows-Suite/main/Modules/Windows-Install/disk_manager.py": "disk_manager.py",
+            "https://raw.githubusercontent.com/coff33ninja/NexTool-Windows-Suite/main/Modules/Windows-Install/media_manager.py": "media_manager.py",
+            "https://raw.githubusercontent.com/coff33ninja/NexTool-Windows-Suite/main/Modules/Windows-Install/utils.py": "utils.py",
+            "https://raw.githubusercontent.com/coff33ninja/NexTool-Windows-Suite/main/Modules/Windows-Install/wim_manager.py": "wim_manager.py"
+        }
+
+        for file_url, filename in file_urls.items():
+            # Combine the base directory with the desired filename
+            file_destination = os.path.join(base_dir, filename)
+            self.download_file(file_url, file_destination)
+            self.print_to_terminal(f"Downloaded {filename}")
+
+        # Assuming the main_app.py is the script you want to run
+        script_path = os.path.join(base_dir, "main_app.py")
+
+        try:
+            with subprocess.Popen(
+                ["python", script_path],
+                stdout=subprocess.PIPE,
+                text=True,
+                bufsize=1,
+                universal_newlines=True,
+            ) as proc:
+                if proc.stdout:  # Check if stdout is not None
+                    for line in proc.stdout:
+                        self.print_to_terminal(line.strip())
+                proc.wait()
+        except Exception as e:
+            self.print_to_terminal(f"Error occurred: {e}")
+
+        # If you want to remove the files after running the script, you can do so like this:
+        for _, filename in file_urls.items():
+            os.remove(os.path.join(base_dir, filename))
+        self.print_to_terminal("Windows Installation Process completed")
+
 
 tabs = {
     "System Information": [],
@@ -3331,7 +3406,6 @@ tabs = {
         "Services Management",
         "Microsoft Activation Script",
     ],
-    "Additional Tool": [],
     "Software Management": [
         "Windows Update",
         "Windows Update Pauser",
@@ -3342,16 +3416,12 @@ tabs = {
         "Office Installations",
     ],
     "Maintenance": ["Disk Cleanup", "Disk Defragment", "Disk Check", "Backupper"],
-    "Advanced": [
+    "Experiments": [
         "Windows Install",
         "DISM and SFC Windows Repair",
         "Windows Debloater",
         "Group Policy Reset",
         "WMI Reset",
-        "Disable Specific Services",
-        "Services Management",
-        "Startup Applications",
-        "Scheduled Tasks",
         "Advanced Hardware Info",
     ],
     "Extras": [],
