@@ -4,6 +4,8 @@ import subprocess
 import platform
 import requests
 import shutil
+import glob
+import winreg
 from PyQt5.QtWidgets import (
     QApplication,
     QMainWindow,
@@ -30,8 +32,11 @@ from PyQt5.QtWidgets import (
     QTableWidget,
     QTableWidgetItem,
     QFileDialog,
+    QMenu,
+    QTextBrowser,
+    QPlainTextEdit,
 )
-from PyQt5.QtGui import QFont, QDesktopServices
+from PyQt5.QtGui import QFont, QDesktopServices, QGuiApplication
 from PyQt5.QtCore import (
     Qt,
     QPropertyAnimation,
@@ -46,6 +51,7 @@ from PyQt5.QtCore import (
     pyqtSignal,
     QUrl,
     QObject,
+    QEasingCurve,
 )
 
 # from PyQt5.QtGui import QGraphicsOpacityEffect
@@ -2665,6 +2671,484 @@ class DriverUpdaterManagerGUI(QDialog):
             self.thread.terminate()
         event.accept()
 
+class DiskCleanupThread(QThread):
+    progress_signal = pyqtSignal(int)
+
+    def run(self):
+        # Ensuring environment variables default to empty strings if not found
+        user_path = os.environ.get("userprofile", "")
+        windir_path = os.environ.get("WINDIR", "")
+        temp_path = os.environ.get("TEMP", "")
+        tmp_path = os.environ.get("TMP", "")
+        systemdrive_path = os.environ.get("systemdrive", "")
+        localappdata_path = os.environ.get("LOCALAPPDATA", "")
+        appdata_path = os.environ.get("APPDATA", "")
+
+        file_formats = ["*.ra", "*.ram", "*.bak", "*.old", "*.chk", "*.gid", "*.log", "*._mp", "*.tmp"]
+
+        # Base paths that need cleaning based on file formats
+        base_paths = [
+            user_path,
+            os.path.join(user_path, "AppData", "Local", "Temp"),
+            windir_path,
+            os.path.join(windir_path, "System32", "DriverStore", "Temp"),
+            os.path.join(windir_path, "WinSxS", "Temp"),
+            os.path.join(windir_path, "Users"),
+            os.path.join(windir_path, "Users", "AppData", "Temp"),
+            temp_path,
+            tmp_path,
+            systemdrive_path,
+            localappdata_path,
+            appdata_path
+            # ... Add other base directories that should be cleaned with these formats
+        ]
+
+        paths_to_clean = [
+            os.path.join(user_path, "Cookies", "*.*"),
+            os.path.join(user_path, "AppData", "Local", "Microsoft", "Windows", "Temporary Internet Files", "*.*"),
+            os.path.join(windir_path, "temp", "*.*"),
+            os.path.join(windir_path, "Prefetch", "*.*"),
+            os.path.join("C:", "Program Files (x86)", "Google", "Temp", "*.*"),
+            os.path.join("C:", "Program Files (x86)", "Steam", "steamapps", "temp", "*.*"),
+            os.path.join("C:", "ProgramData", "Microsoft", "Windows", "WER", "Temp", "*.*"),
+            os.path.join("C:", "Users", "All Users", "Microsoft", "Windows", "WER", "Temp", "*.*"),
+            os.path.join(localappdata_path, "BraveSoftware", "Brave-Browser", "User Data", "Default", "Cache", "*.*"),
+            os.path.join(localappdata_path, "Google", "Chrome", "User Data", "Default", "Cache", "*.*"),
+            os.path.join(localappdata_path, "Mozilla", "Firefox", "Profiles", "*", "Cache", "*.*"),
+            os.path.join(localappdata_path, "Mozilla", "Firefox", "Profiles", "*", "Cache2", "*.*"),
+            os.path.join(windir_path, "SoftwareDistribution", "Download", "*.*"),
+            os.path.join(systemdrive_path, "System Volume Information", "*"),
+            os.path.join(systemdrive_path, "$Recycle.Bin", "*.*"),
+            os.path.join(user_path, "Recent", "*.*"),
+            os.path.join(user_path, "AppData", "Roaming", "Microsoft", "Windows", "Recent", "*.*"),
+            os.path.join(localappdata_path, "Microsoft", "Windows", "WER", "ReportQueue", "*.*"),
+            os.path.join(appdata_path, "Adobe", "Common", "Cache", "*.*"),
+            os.path.join(localappdata_path, "Microsoft", "Windows", "1033", "*.*"),
+            os.path.join(localappdata_path, "Microsoft", "Windows", "Explorer", "thumbcache_*.db"),
+            os.path.join(appdata_path, "LocalLow", "Temp", "*.*"),
+            os.path.join(windir_path, "Logs", "*.*")
+            # ... Add other specific directories and paths
+        ]
+
+        # Extend paths_to_clean with all file formats for the base paths
+        for path in paths_to_clean:
+            self.safe_delete(path, file_formats)
+
+        self.run_windows_cleanmgr()
+        self.progress_signal.emit(100)
+
+    def safe_delete(self, path, file_formats):
+        """Attempt to delete a file or directory, and log if unsuccessful."""
+        if "*" in path or "?" in path:  # Handle wildcard deletions
+            for item in glob.glob(path):
+                self.safe_delete(item, file_formats)  # Passing file_formats in recursive call
+            return
+
+        try:
+            if os.path.isfile(path) and path.endswith(tuple(file_formats)):
+                os.remove(path)
+                logging.info(f"Successfully deleted file: {path}")
+            elif os.path.isdir(path):
+                shutil.rmtree(path)
+                logging.info(f"Successfully deleted directory: {path}")
+        except Exception as e:
+            logging.warning(f"Couldn't delete {path}. Reason: {e}")
+
+    def run_windows_cleanmgr(self):
+        try:
+            subprocess.run("cleanmgr.exe", check=True)
+        except subprocess.CalledProcessError:
+            logging.warning("Failed to launch Windows Disk Cleanup Utility.")
+
+class DiskCleanerApp(QWidget):
+    def __init__(self):
+        super().__init__()
+
+        self.init_ui()
+        self.thread: DiskCleanupThread = DiskCleanupThread()
+        self.thread.progress_signal.connect(self.update_progress)
+
+    def init_ui(self):
+        self.layout: QVBoxLayout = QVBoxLayout()
+
+        self.label = QLabel("Press the button to start disk cleanup.")
+        self.layout.addWidget(self.label)
+
+        self.progress_bar = QProgressBar(self)
+        self.layout.addWidget(self.progress_bar)
+
+        self.button = QPushButton("Start Disk Cleanup", self)
+        self.button.clicked.connect(self.start_cleanup)
+        self.layout.addWidget(self.button)
+
+        self.setLayout(self.layout)
+        self.setWindowTitle('Disk Cleaner')
+        self.show()
+
+    def start_cleanup(self):
+        user_response = QMessageBox.question(self, "Confirmation", "Are you sure you want to start the disk cleanup process?", QMessageBox.Yes | QMessageBox.No)
+        if user_response == QMessageBox.Yes:
+            self.button.setEnabled(False)
+            self.thread.start()
+        else:
+            QApplication.quit()
+
+    def update_progress(self, val):
+        self.progress_bar.setValue(val)
+        if val == 100:
+            self.button.setEnabled(True)
+            QMessageBox.information(self, "Completed", "Disk Cleanup Completed!")
+
+class DiskCheckThread(QThread):
+    output_signal = pyqtSignal(str)
+
+    def __init__(self, drive_letter):
+        super().__init__()
+        self.drive_letter = drive_letter
+
+    def run(self):
+        try:
+            result = subprocess.check_output(f"CHKDSK {self.drive_letter}: /R /I /F /X", shell=True, stderr=subprocess.STDOUT, text=True)
+            self.output_signal.emit(result)
+        except subprocess.CalledProcessError as e:
+            self.output_signal.emit(f"Error while running CHKDSK: {e.output}")
+        except Exception as e:
+            self.output_signal.emit(f"Unexpected error: {e}")
+
+class DiskCheckApp(QWidget):
+    thread: Optional[DiskCheckThread]
+
+    def __init__(self):
+        super().__init__()
+
+        self.thread = None
+
+        self.init_ui()
+
+    def init_ui(self):
+        layout = QVBoxLayout()
+
+        self.drive_combo = QComboBox(self)
+        for drive in self.get_available_drives():
+            self.drive_combo.addItem(drive)
+        layout.addWidget(self.drive_combo)
+
+        self.output_terminal = QTextBrowser(self)
+        layout.addWidget(self.output_terminal)
+
+        self.start_btn = QPushButton("Start Disk Check", self)
+        self.start_btn.clicked.connect(self.start_disk_check)
+        layout.addWidget(self.start_btn)
+
+        self.setLayout(layout)
+        self.setWindowTitle('Disk Check Utility')
+
+    def get_available_drives(self):
+        return [f"{d}:\\" for d in 'ABCDEFGHIJKLMNOPQRSTUVWXYZ' if os.path.exists(f"{d}:")]
+
+    def start_disk_check(self):
+        drive_letter = self.drive_combo.currentText().replace(":\\", "")
+        self.output_terminal.append(f"Checking drive: {drive_letter}:\n")
+
+        self.thread = DiskCheckThread(drive_letter)
+        self.thread.output_signal.connect(self.update_terminal)
+        self.thread.start()
+
+    def update_terminal(self, text):
+        self.output_terminal.append(text)
+
+class DISM_SFC_Thread(QThread):
+    output_signal = pyqtSignal(str)
+
+    def __init__(self, cmd):
+        super().__init__()
+        self.cmd = cmd
+
+    def run(self):
+        process = subprocess.Popen(self.cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
+        out, err = process.communicate()
+
+        # Emitting the output to update the UI
+        self.output_signal.emit(out.decode("utf-8"))
+        if err:
+            self.output_signal.emit(err.decode("utf-8"))
+
+class SystemCheckApp(QWidget):
+    def __init__(self):
+        super().__init__()
+        self.thread: Optional[DISM_SFC_Thread] = None
+        self.init_ui()
+
+    def init_ui(self):
+        layout = QVBoxLayout()
+
+
+        # Buttons
+        self.dism_cleanup_btn = QPushButton("StartComponentCleanup / ResetBase", self)
+        self.dism_superseded_btn = QPushButton("SPSuperseded", self)
+        self.check_health_btn = QPushButton("CheckHealth", self)
+        self.scan_health_btn = QPushButton("ScanHealth", self)
+        self.restore_health_btn = QPushButton("RestoreHealth", self)
+        self.sfc_btn = QPushButton("SFC Scan Now", self)
+
+        # Connecting buttons to functions
+        self.dism_cleanup_btn.clicked.connect(self.on_dism_cleanup_clicked)
+        self.dism_superseded_btn.clicked.connect(self.on_dism_superseded_clicked)
+        self.check_health_btn.clicked.connect(self.on_check_health_clicked)
+        self.scan_health_btn.clicked.connect(self.on_scan_health_clicked)
+        self.restore_health_btn.clicked.connect(self.on_restore_health_clicked)
+        self.sfc_btn.clicked.connect(self.on_sfc_clicked)
+
+        # Adding buttons to layout
+        layout.addWidget(self.dism_cleanup_btn)
+        layout.addWidget(self.dism_superseded_btn)
+        layout.addWidget(self.check_health_btn)
+        layout.addWidget(self.scan_health_btn)
+        layout.addWidget(self.restore_health_btn)
+        layout.addWidget(self.sfc_btn)
+
+        self.output = QPlainTextEdit(self)
+        layout.addWidget(self.output)
+
+        # self.thread: DISM_SFC_Thread = DISM_SFC_Thread(cmd)  # Type hinting here
+        # self.thread.output_signal.connect(self.update_output)
+
+        # Setting layout and other properties
+        self.setLayout(layout)
+        self.setWindowTitle('DISM and SFC Tool')
+        self.show()
+
+    def execute_command(self, command):
+        try:
+            subprocess.run(command, shell=True)
+        except Exception as e:
+            print(f"Error executing command: {e}")
+
+    def on_dism_cleanup_clicked(self):
+        msg = ("This will initiate a cleanup of the Windows component store to reclaim space. "
+               "This procedure will also reset the base of superseded components. Do you want to continue?")
+        reply = QMessageBox.question(self, "Confirmation", msg, QMessageBox.Yes | QMessageBox.No)
+        if reply == QMessageBox.Yes:
+            cmd = ("Dism.exe /online /Cleanup-Image /StartComponentCleanup /ResetBase")
+            self.thread = DISM_SFC_Thread(cmd)
+            self.thread.output_signal.connect(self.update_output)
+            self.thread.start()
+
+    def on_dism_superseded_clicked(self):
+        msg = ("This will remove any backup components needed for de-installation of public software updates. "
+               "Do you want to continue?")
+        reply = QMessageBox.question(self, "Confirmation", msg, QMessageBox.Yes | QMessageBox.No)
+        if reply == QMessageBox.Yes:
+            cmd = ("Dism.exe /online /Cleanup-Image /SPSuperseded")
+            self.thread = DISM_SFC_Thread(cmd)
+            self.thread.output_signal.connect(self.update_output)
+            self.thread.start()
+
+    def on_check_health_clicked(self):
+        msg = "This will check the health of your Windows image. Do you want to continue?"
+        reply = QMessageBox.question(self, "Confirmation", msg, QMessageBox.Yes | QMessageBox.No)
+        if reply == QMessageBox.Yes:
+            cmd = ("DISM /Online /Cleanup-Image /CheckHealth")
+            self.thread = DISM_SFC_Thread(cmd)
+            self.thread.output_signal.connect(self.update_output)
+            self.thread.start()
+
+    def on_scan_health_clicked(self):
+        msg = "This will scan the health of your Windows image. Do you want to continue?"
+        reply = QMessageBox.question(self, "Confirmation", msg, QMessageBox.Yes | QMessageBox.No)
+        if reply == QMessageBox.Yes:
+            cmd = ("DISM /Online /Cleanup-Image /ScanHealth")
+            self.thread = DISM_SFC_Thread(cmd)
+            self.thread.output_signal.connect(self.update_output)
+            self.thread.start()
+
+    def on_restore_health_clicked(self):
+        msg = "This will attempt to restore the health of your Windows image. Do you want to continue?"
+        reply = QMessageBox.question(self, "Confirmation", msg, QMessageBox.Yes | QMessageBox.No)
+        if reply == QMessageBox.Yes:
+            cmd = ("DISM /Online /Cleanup-Image /RestoreHealth")
+            self.thread = DISM_SFC_Thread(cmd)
+            self.thread.output_signal.connect(self.update_output)
+            self.thread.start()
+
+    def on_sfc_clicked(self):
+        msg = ("This will scan all protected system files, and replace corrupted files with a cached copy "
+               "that is located in a compressed folder at %WinDir%\\System32\\dllcache. Do you want to continue?")
+        reply = QMessageBox.question(self, "Confirmation", msg, QMessageBox.Yes | QMessageBox.No)
+        if reply == QMessageBox.Yes:
+            cmd = ("sfc /scannow")
+            self.thread = DISM_SFC_Thread(cmd)
+            self.thread.output_signal.connect(self.update_output)
+            self.thread.start()
+
+    def update_output(self, text):
+        self.output.appendPlainText(text)
+
+class GroupPolicyResetApp(QWidget):
+    def __init__(self):
+        super().__init__()
+        self.init_ui()
+
+    def init_ui(self):
+        layout = QVBoxLayout()
+        self.output = QPlainTextEdit(self)
+        layout.addWidget(self.output)
+
+        # Add a button to start the reset process
+        self.reset_button = QPushButton('Reset Group Policy', self)
+        self.reset_button.clicked.connect(self.on_reset_clicked)
+        layout.addWidget(self.reset_button)
+
+        self.setLayout(layout)
+        self.setWindowTitle('Group Policy Reset Tool')
+        self.show()
+
+        self.output = QPlainTextEdit(self)
+        layout.addWidget(self.output)
+
+    def on_reset_clicked(self):
+        # Prompt user for confirmation
+        msg = ("The Group Policy Editor is an important tool for Windows OS using which "
+               "System Administrators can fine-tune system settings. It has several infrastructural "
+               "configuration options that allow you to make adjustments to the specific performance "
+               "and security settings for users and computers. Sometimes you might end up tweaking your "
+               "Group Policy Editor a bit further down the line where your computer starts behaving in "
+               "an unwanted way. This is when you know that its time to reset all Group Policy settings "
+               "to default and save yourself the pain of reinstalling Windows again. This section is "
+               "Pre-Setup so that you won't have to look through forums to find a solution. Please "
+               "reboot once the cleanup is complete. Do you understand and want to continue?")
+
+        reply = QMessageBox.question(self, 'GROUP POLICY RESET AGREEMENT', msg,
+                                     QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
+        if reply == QMessageBox.Yes:
+            self.run_reset_script()
+    def run_reset_script(self):
+        try:
+            # Reset Group Policies
+            self.delete_reg_key(winreg.HKEY_CURRENT_USER, r"Software\Microsoft\Windows\CurrentVersion\Policies")
+            self.delete_reg_key(winreg.HKEY_CURRENT_USER, r"Software\Microsoft\WindowsSelfHost")
+            self.delete_reg_key(winreg.HKEY_CURRENT_USER, r"Software\Policies")
+            self.delete_reg_key(winreg.HKEY_LOCAL_MACHINE, r"Software\Microsoft\Policies")
+            self.delete_reg_key(winreg.HKEY_LOCAL_MACHINE, r"Software\Microsoft\Windows\CurrentVersion\Policies")
+            self.delete_reg_key(winreg.HKEY_LOCAL_MACHINE, r"Software\Microsoft\Windows\CurrentVersion\WindowsStore\WindowsUpdate")
+            self.delete_reg_key(winreg.HKEY_LOCAL_MACHINE, r"Software\Microsoft\WindowsSelfHost")
+            self.delete_reg_key(winreg.HKEY_LOCAL_MACHINE, r"Software\Policies")
+            self.delete_reg_key(winreg.HKEY_LOCAL_MACHINE, r"Software\WOW6432Node\Microsoft\Policies")
+            self.delete_reg_key(winreg.HKEY_LOCAL_MACHINE, r"Software\WOW6432Node\Microsoft\Windows\CurrentVersion\Policies")
+            self.delete_reg_key(winreg.HKEY_LOCAL_MACHINE, r"Software\WOW6432Node\Microsoft\Windows\CurrentVersion\WindowsStore\WindowsUpdate")
+
+            # Run gpupdate
+            result = subprocess.run(['gpupdate', '/force'], capture_output=True, text=True)
+            if result.returncode != 0:
+                raise Exception(f"gpupdate /force failed with error: {result.stderr}")
+
+            QMessageBox.information(self, 'Reset Complete', 'Group Policy has been successfully reset. Please reboot your computer.')
+
+        except Exception as e:
+            QMessageBox.critical(self, 'Error', f"An error occurred: {str(e)}")
+
+
+    def delete_reg_key(self, hive, subkey):
+        try:
+            with winreg.OpenKey(hive, subkey, 0, winreg.KEY_WRITE) as key:
+                winreg.DeleteKey(key, "")
+        except FileNotFoundError:
+            # Key does not exist, which is fine
+            pass
+        except Exception as e:
+            QMessageBox.critical(self, 'Error', f"Failed to delete registry key: {str(e)}")
+
+    def update_output(self, text):
+        self.output.appendPlainText(text)
+
+class WMIResetApp(QWidget):
+    def __init__(self):
+        super().__init__()
+        self.init_ui()
+
+    def init_ui(self):
+        layout = QVBoxLayout()
+
+        self.confirm_button = QPushButton("Confirm WMI Reset", self)
+        self.confirm_button.clicked.connect(self.confirm_reset)
+
+        layout.addWidget(self.confirm_button)
+        self.setLayout(layout)
+        self.setWindowTitle('Windows Management Instrumentation Reset Tool')
+        self.show()
+
+    def confirm_reset(self):
+        message = ("Full WMI reset to the state when the operating system was installed is a serious measurement...[your full message]")
+        reply = QMessageBox.warning(self, 'WMI Reset Agreement', message, QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
+        if reply == QMessageBox.Yes:
+            self.perform_reset()
+
+    def perform_reset(self):
+        # Here's the logic for the newer method
+        result = subprocess.run(['winmgmt', '/salvagerepository'], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+
+        if "failed" in result.stderr.lower():
+            result = subprocess.run(['winmgmt', '/recoverrepository'], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+            if "failed" in result.stderr.lower():
+                self.perform_old_reset()
+        QMessageBox.information(self, 'Reset Complete', 'WMI Repository has been successfully reset.')
+
+    def perform_old_reset(self):
+        # Logic for the older reset method
+        commands = [
+            ['sc', 'config', 'winmgmt', 'start= disabled'],
+            ['net', 'stop', 'winmgmt', '/y'],
+            ['regsvr32', '/s', '%systemroot%\\system32\\scecli.dll'],
+            ['regsvr32', '/s', '%systemroot%\\system32\\userenv.dll'],
+            # Navigate to WBEM folder
+            ['cd', '/d', '%systemroot%\\system32\\wbem'],
+            # Remove 'repository' folder
+            ['rd', '/S', '/Q', 'repository'],
+            # Register Service DLLs
+        ]
+
+        for command in commands:
+            subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+
+        # Register all DLLs in the directory
+        result = subprocess.run(['dir', '/b', '/s', '*.dll'], capture_output=True, text=True, shell=True)
+        all_dlls = result.stdout.split('\n')
+        for dll in all_dlls:
+            if dll:  # To ensure the string isn't empty
+                subprocess.run(['regsvr32', '/s', dll], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+
+        # Re-registering .mof and .mfl files
+        mof_result = subprocess.run(['dir', '/b', '*.mof'], capture_output=True, text=True, shell=True)
+        all_mofs = mof_result.stdout.split('\n')
+        for mof in all_mofs:
+            if mof:
+                subprocess.run(['mofcomp', mof], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+
+        mfl_result = subprocess.run(['dir', '/b', '*.mfl'], capture_output=True, text=True, shell=True)
+        all_mfls = mfl_result.stdout.split('\n')
+        for mfl in all_mfls:
+            if mfl:
+                subprocess.run(['mofcomp', mfl], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+
+        # Continue with the reset process
+        commands_contd = [
+            ['wmiprvse', '/regserver'],
+            ['winmgmt', '/regserver'],
+            # Navigate to WBEM folder in SysWOW64
+            ['cd', '/d', '%systemroot%\\SysWOW64\\wbem'],
+            # Remove 'repository' folder
+            ['rd', '/S', '/Q', 'repository'],
+            # Turn winmgmt service Startup type to Automatic
+            ['sc', 'config', 'winmgmt', 'start= auto'],
+            # Start winmgmt service
+            ['net', 'start', 'winmgmt'],
+            ['winmgmt', '/resetrepository']
+        ]
+
+        for command in commands_contd:
+            subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+
+
 class CustomUI(QMainWindow):
     def __init__(self):
         super().__init__()
@@ -2704,6 +3188,11 @@ class CustomUI(QMainWindow):
         refresh_action.triggered.connect(self.refresh_system_info)
         file_menu.addAction(refresh_action)
 
+        # Shutdown Options Menu
+        shutdown_menu = QMenu("Shutdown Options", self)
+        self.setup_shutdown_menu(shutdown_menu)
+        menu_bar.addMenu(shutdown_menu)
+
         # Construct the menu based on the tabs dictionary
         self.construct_menu(tabs)
 
@@ -2735,6 +3224,32 @@ class CustomUI(QMainWindow):
     def refresh_system_info(self):
         updated_info = consolidate_info(get_system_information())
         self.system_info_text_display.setPlainText(updated_info)
+
+    def setup_shutdown_menu(self, menu):
+        shutdown_options = {
+            1: ("Restart (Default Setting)", "shutdown /r /t 1"),
+            2: ("Restart Reregister Applications", "shutdown /g /t 1"),
+            3: ("Restart PC to UEFI/BIOS menu", "shutdown /r /fw /t 1"),
+            4: ("Restart PC and load the advanced boot options menu", "shutdown /r /o /t 1"),
+            5: ("Shutdown PC (Default Setting)", "shutdown /s /t 1"),
+            6: ("Shutdown PC and Re-register any applications on next boot", "shutdown /sg /t 1"),
+            7: ("Sign Out User", "shutdown /l")
+        }
+
+        for key, (text, cmd) in shutdown_options.items():
+            action = QAction(f"[{key}] {text}", self)
+            action.triggered.connect(lambda checked, cmd=cmd: self.execute_shutdown_option(cmd))
+            menu.addAction(action)
+
+    def execute_shutdown_option(self, cmd):
+        if cmd:
+            res = QMessageBox.question(self, 'Confirmation',
+                                       f"Are you sure you want to execute the command?",
+                                       QMessageBox.Yes | QMessageBox.No)
+
+            if res == QMessageBox.Yes:
+                subprocess.run(cmd, shell=True)
+
 
     def construct_menu(self, menu_dict):
         for main, subitems in menu_dict.items():
@@ -2811,9 +3326,20 @@ class CustomUI(QMainWindow):
                             btn.clicked.connect(self.launch_driver_updater)
                         elif item == "Windows Install":
                             btn.clicked.connect(self.launch_windows_installer)
-
-                        # elif item == "PatchMyPC":
-                        #    btn.clicked.connect(self.launch_patchmypc_tool)
+                        elif item == "Disk Cleanup":
+                            btn.clicked.connect(self.launch_disk_cleanup)
+                        elif item == "Disk Defragment":
+                            btn.clicked.connect(self.show_defrag_info)
+                        elif item == "Disk Check":
+                            btn.clicked.connect(self.launch_DiskCheckApp)
+                        elif item == "DISM and SFC Windows Repair":
+                            btn.clicked.connect(self.launch_SystemCheckApp)
+                        elif item == "Group Policy Reset":
+                            btn.clicked.connect(self.launch_GroupPolicyResetApp)
+                        elif item == "WMI Reset":
+                            btn.clicked.connect(self.launch_WMIResetApp)
+                        elif item == "Backup and Restore":
+                            btn.clicked.connect(self.run_backup_and_restore)
 
                         layout.addWidget(btn)
 
@@ -3386,6 +3912,96 @@ class CustomUI(QMainWindow):
             os.remove(os.path.join(base_dir, filename))
         self.print_to_terminal("Windows Installation Process completed")
 
+    def launch_disk_cleanup(self):
+        self.DiskCleanerApp = DiskCleanerApp()
+        self.DiskCleanerApp.show()
+    def show_defrag_info(self):
+        message = (
+            "Defragmentation is an advanced system operation that involves rearranging the way information "
+            "is stored on a hard drive, ensuring that related data are stored physically closer together, "
+            "which can speed up data access on traditional spinning hard drives. For SSDs (Solid State Drives), "
+            "defragmentation is not required and can reduce the lifespan of the SSD due to unnecessary writes.\n\n"
+            "It is not feasible to create a complete defragmentation tool using just Python without relying on "
+            "system tools, especially because the process requires low-level access to the file system and disk hardware."
+            "\n\nWould you like to open the Windows defragmentation tool?"
+        )
+
+        reply = QMessageBox.question(self, "Defragmentation Information", message,
+                                     QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
+
+        if reply == QMessageBox.Yes:
+            try:
+                subprocess.run("dfrgui.exe")
+            except Exception as e:
+                print(f"Error while opening defragmentation tool: {e}")
+
+    def launch_DiskCheckApp(self):
+        self.DiskCheckApp = DiskCheckApp()
+        self.DiskCheckApp.show()
+
+    def launch_SystemCheckApp(self):
+        self.SystemCheckApp = SystemCheckApp()
+        self.SystemCheckApp.show()
+
+    def launch_GroupPolicyResetApp(self):
+        self.GroupPolicyResetApp = GroupPolicyResetApp()
+        self.GroupPolicyResetApp.show()
+
+    def launch_WMIResetApp(self):
+        self.WMIResetApp = WMIResetApp()
+        self.WMIResetApp.show()
+
+    def run_backup_and_restore(self):
+        self.print_to_terminal("Starting Backup/Restore Process...")
+
+        # Define the base directory and ensure it exists
+        base_dir = "C:\\NexTool\\Advanced"
+        if not os.path.exists(base_dir):
+            os.makedirs(base_dir)
+
+        # List of files you want to download
+        file_urls = {
+            "https://raw.githubusercontent.com/coff33ninja/NexTool-Windows-Suite/main/Modules/BACKUP_AND_RESTORE.py": "BACKUP_AND_RESTORE.py",
+        }
+
+        for file_url, filename in file_urls.items():
+            # Combine the base directory with the desired filename
+            file_destination = os.path.join(base_dir, filename)
+            self.download_file(file_url, file_destination)
+            self.print_to_terminal(f"Downloaded {filename}")
+
+        # Assuming the main_app.py is the script you want to run
+        script_path = os.path.join(base_dir, "BACKUP_AND_RESTORE.py")
+
+        try:
+            with subprocess.Popen(
+                ["python", script_path],
+                stdout=subprocess.PIPE,
+                text=True,
+                bufsize=1,
+                universal_newlines=True,
+            ) as proc:
+                if proc.stdout:  # Check if stdout is not None
+                    for line in proc.stdout:
+                        self.print_to_terminal(line.strip())
+                proc.wait()
+        except Exception as e:
+            self.print_to_terminal(f"Error occurred: {e}")
+
+        # If you want to remove the files after running the script, you can do so like this:
+        for _, filename in file_urls.items():
+            os.remove(os.path.join(base_dir, filename))
+        self.print_to_terminal("Backup/Restore Process completed")
+
+
+#    def launch_AdvancedHardwareInfoApp(self):
+#        self.AdvancedHardwareInfoApp = AdvancedHardwareInfoApp()
+#        self.AdvancedHardwareInfoApp.show()
+
+#    def launch_BackupperApp(self):
+#        self.BackupperApp = BackupperApp()
+#        self.BackupperApp.show()
+
 
 tabs = {
     "System Information": [],
@@ -3415,25 +4031,16 @@ tabs = {
         "Driver Updater",
         "Office Installations",
     ],
-    "Maintenance": ["Disk Cleanup", "Disk Defragment", "Disk Check", "Backupper"],
+    "Maintenance": ["Disk Cleanup", "Disk Defragment", "Disk Check", "DISM and SFC Windows Repair", "Backup or Restore"],
     "Experiments": [
         "Windows Install",
-        "DISM and SFC Windows Repair",
         "Windows Debloater",
         "Group Policy Reset",
         "WMI Reset",
         "Advanced Hardware Info",
     ],
     "Extras": [],
-    "Shutdown Options": [
-        "Restart",
-        "Restart and Re-register",
-        "Restart to UEFI/BIOS",
-        "Restart and Load Advanced Boot Options",
-        "Shutdown",
-        "Shutdown and Re-register",
-        "Sign Out",
-    ],
+
 }
 
 if __name__ == "__main__":
