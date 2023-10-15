@@ -71,7 +71,7 @@ import win32api
 import win32con
 import win32com.client
 import win32service
-
+sys.path.insert(0, os.path.abspath('..'))
 
 logging.basicConfig(
     filename="app.log",
