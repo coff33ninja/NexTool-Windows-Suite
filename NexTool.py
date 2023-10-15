@@ -3017,7 +3017,7 @@ class CustomUI(QMainWindow):
                         elif item == "Office Installations":
                             btn.clicked.connect(self.run_office_tool)
                         elif item == "Snappy Driver":
-                            btn.clicked.connect(self.launch_driver_updater)
+                            btn.clicked.connect(self.run_driver_updater)
                         elif item == "Windows Install":
                             btn.clicked.connect(self.launch_windows_installer)
                         elif item == "Disk Cleanup":
@@ -3563,7 +3563,7 @@ class CustomUI(QMainWindow):
         for _, filename in file_urls.items():
             os.remove(os.path.join(base_dir, filename))
 
-    def launch_driver_updater(self):
+    def run_driver_updater(self):
         self.print_to_terminal("Starting Driver Download Process...")
 
         # Define the base directory and ensure it exists
@@ -3582,7 +3582,7 @@ class CustomUI(QMainWindow):
             self.download_file(file_url, file_destination)
             self.print_to_terminal(f"Downloaded {filename}")
 
-        # Running the OfficeSetupManager.py script
+        # Running the DriverUpdaterManager.py script
         script_path = os.path.join(base_dir, "DriverUpdaterManager.py")
 
         try:
@@ -3790,7 +3790,7 @@ tabs = {
         "PatchMyPC",
         "Chocolatey",
         "Winget",
-        "Driver Updater",
+        "Snappy Driver",
         "Office Installations",
     ],
     "Maintenance": ["Disk Cleanup", "Disk Defragment", "Disk Check", "DISM and SFC Windows Repair", "Backup or Restore"],
