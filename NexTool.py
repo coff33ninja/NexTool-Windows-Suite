@@ -2365,188 +2365,6 @@ class WingetManager:
         except Exception as e:
             return f"Error occurred: {e}"
 
-class DriverUpdaterManager(QObject):
-    finished = pyqtSignal()
-    message_signal = pyqtSignal(str)
-    progress_signal = pyqtSignal(int)
-
-    def __init__(self, print_func: Callable[[str], None]):
-        super().__init__()
-        self.BASE_DIR = "C:\\NexTool\\Updater"
-        self.SNAPPY_URL = "https://raw.githubusercontent.com/coff33ninja/AIO/main/TOOLS/3.UPDATER/SNAPPY_DRIVER.zip"
-        self.print_func = print_func
-        self.update_paths()
-
-    def update_paths(self):
-        self.SNAPPY_ZIP_PATH = os.path.join(self.BASE_DIR, "SNAPPY_DRIVER.zip")
-        self.SNAPPY_EXTRACT_PATH = os.path.join(self.BASE_DIR, "SNAPPY_DRIVER")
-
-    def set_base_dir(self, new_base_dir):
-        self.BASE_DIR = new_base_dir
-        self.update_paths()
-
-    def ensure_directory_exists(self, print_func: Callable[[str], None]):
-        if not os.path.exists(self.BASE_DIR):
-            os.makedirs(self.BASE_DIR)
-            self.print_func(f"Directory {self.BASE_DIR} created.")
-        else:
-            self.print_func(f"Directory {self.BASE_DIR} already exists.")
-
-    def download_driver(self):
-        # Download the Snappy Driver zip file
-        self.download_file(self.SNAPPY_URL, self.SNAPPY_ZIP_PATH)
-
-    def download_file(self, url: str, destination: str) -> None:
-        try:
-            response = requests.get(url, stream=True)
-            total_size = int(response.headers.get('content-length', 0))
-
-            with open(destination, 'wb') as f:
-                for data in response.iter_content(8192):
-                    f.write(data)
-                    downloaded_size = f.tell()
-                    progress = int((downloaded_size / total_size) * 50)  # Assuming download is 50% of the total process
-                    self.progress_signal.emit(progress)
-
-            self.message_signal.emit(f"Downloaded file from {url} to {destination}.")
-
-        except Exception as e:
-            self.message_signal.emit(f"Error downloading {url}: {e}")
-
-    def extract_driver(self):
-        # Extract the downloaded zip
-        with zipfile.ZipFile(self.SNAPPY_ZIP_PATH, "r") as zip_ref:
-            total_files = len(zip_ref.infolist())
-            for index, file in enumerate(zip_ref.infolist()):
-                zip_ref.extract(file, self.SNAPPY_EXTRACT_PATH)
-                progress = 50 + int((index / total_files) * 50)
-                self.progress_signal.emit(progress)
-
-    def install_driver(self):
-        # Execute the appropriate Snappy Driver Installer based on system's architecture
-        arch = platform.architecture()[0]
-        if arch == "64bit":
-            exe_path = os.path.join(self.SNAPPY_EXTRACT_PATH, "SDI_x64_R2111.exe")
-        elif arch == "32bit":
-            exe_path = os.path.join(self.SNAPPY_EXTRACT_PATH, "SDI_R2111.exe")
-        else:
-            raise Exception(f"Unsupported architecture: {arch}")
-
-        subprocess.run([exe_path, "-checkupdates", "-autoupdate", "-autoclose"], check=True)
-
-    def run(self):
-        self.message_signal.emit("RUNNING DRIVER UPDATER...")
-        try:
-            self.ensure_directory_exists(self.print_func)
-            self.download_driver()
-            self.extract_driver()
-            self.install_driver()
-            # Optionally, delete the downloaded ZIP after the update
-            os.remove(self.SNAPPY_ZIP_PATH)
-            self.message_signal.emit("Driver update completed!")
-        except Exception as e:
-            self.message_signal.emit(f"Error occurred: {e}")
-        self.finished.emit()
-
-
-class DriverUpdaterManagerGUI(QDialog):
-    def __init__(self, print_func):
-        super().__init__()
-
-        self.thread: Optional[QThread] = None
-        self.updater = DriverUpdaterManager(self.print_to_terminal)
-
-        # Default save path
-        self.save_path = "C:\\NexTool\\Updater"
-        self.updater.finished.connect(self.on_updater_finished)
-        self.updater.message_signal.connect(self.print_to_terminal)
-        self.init_ui()
-
-    def init_ui(self):
-        layout = QVBoxLayout()
-
-        # Terminal-like display
-        self.terminal_display = QTextEdit(self)
-        self.terminal_display.setReadOnly(True)
-        layout.addWidget(self.terminal_display)
-
-        # Progress bar
-        self.progress_bar = QProgressBar(self)
-        self.progress_bar.setRange(0, 100)  # 0% to 100%
-        self.updater.progress_signal.connect(self.update_progress_bar)
-        layout.addWidget(self.progress_bar)
-
-        # Save Path button
-        self.save_path_button = QPushButton(
-            f"Set Save Path (Current: {self.save_path})", self
-        )
-        self.save_path_button.clicked.connect(self.set_save_path)
-        layout.addWidget(self.save_path_button)
-
-        # Start button
-        self.start_button = QPushButton("Start Driver Update", self)
-        self.start_button.clicked.connect(self.start_update)
-        layout.addWidget(self.start_button)
-
-        # Stop Button
-        self.stop_button = QPushButton("Stop Update", self)
-        self.stop_button.clicked.connect(self.stop_update)
-        layout.addWidget(self.stop_button)
-
-        self.setLayout(layout)
-        self.setWindowTitle("Driver Updater GUI")
-        self.resize(500, 350)
-
-    def print_to_terminal(self, message):
-        self.terminal_display.append(message)
-
-    def set_save_path(self):
-        dir_ = QFileDialog.getExistingDirectory(
-            self, "Select a directory", self.save_path
-        )
-        if dir_:
-            self.save_path = dir_
-            self.updater.set_base_dir(self.save_path)
-            self.save_path_button.setText(
-                f"Set Save Path (Current: {self.save_path})")
-
-    def enable_start_button(self):
-        self.start_button.setEnabled(True)
-
-    def start_update(self):
-        if self.thread and self.thread.isRunning():
-            self.print_to_terminal("Updater is already running!")
-            return
-
-        self.start_button.setEnabled(False)
-        self.save_path_button.setEnabled(False)
-        self.thread = QThread()
-        self.updater.moveToThread(self.thread)
-        self.thread.started.connect(self.updater.run)
-        self.thread.finished.connect(self.thread.deleteLater)
-        self.thread.finished.connect(self.enable_start_button)
-        self.thread.start()
-
-    def stop_update(self):
-        if self.thread and self.thread.isRunning():
-            self.thread.terminate()
-            self.print_to_terminal("Updater terminated!")
-
-    def update_progress_bar(self, value):
-        self.progress_bar.setValue(value)
-
-    def on_updater_finished(self):
-        # This method will be called when the updater is done
-        self.start_button.setEnabled(True)
-        if self.thread:
-            self.thread.quit()
-
-    def closeEvent(self, event):
-        self.save_path_button.setEnabled(True)
-        if self.thread and self.thread.isRunning():
-            self.thread.terminate()
-        event.accept()
-
 class DiskCleanupThread(QThread):
     progress_signal = pyqtSignal(int)
 
@@ -3196,7 +3014,7 @@ class CustomUI(QMainWindow):
                             btn.clicked.connect(self.launch_chocolatey_gui)
                         elif item == "Winget":
                             btn.clicked.connect(self.launch_winget_gui)
-                        elif item == "Office Instalations":
+                        elif item == "Office Installations":
                             btn.clicked.connect(self.run_office_tool)
                         elif item == "Snappy Driver":
                             btn.clicked.connect(self.launch_driver_updater)
@@ -3722,38 +3540,70 @@ class CustomUI(QMainWindow):
             self.download_file(file_url, file_destination)
             self.print_to_terminal(f"Downloaded {filename}")
 
-        # Assuming the main_app.py is the script you want to run
+        # Running the OfficeSetupManager.py script
         script_path = os.path.join(base_dir, "OfficeSetupManager.py")
 
         try:
             with subprocess.Popen(
-                ["python", script_path],
-                stdout=subprocess.PIPE,
-                text=True,
-                bufsize=1,
-                universal_newlines=True,
-            ) as proc:
+                    ["python", script_path],
+                    stdout=subprocess.PIPE,
+                    text=True,
+                    bufsize=1,
+                    universal_newlines=True,
+                ) as proc:
                 if proc.stdout:  # Check if stdout is not None
                     for line in proc.stdout:
                         self.print_to_terminal(line.strip())
                 proc.wait()
+                self.print_to_terminal("Office Download Process completed")
         except Exception as e:
             self.print_to_terminal(f"Error occurred: {e}")
-
-        # Now, start the process for the OfficeSetupManager
-        self.print_to_terminal("Starting Office Tool Plus setup...")
-
-        def progress_callback(percentage):
-            self.print_to_terminal(f"Progress: {percentage}%")
 
         # If you want to remove the files after running the script, you can do so like this:
         for _, filename in file_urls.items():
             os.remove(os.path.join(base_dir, filename))
 
     def launch_driver_updater(self):
-        print("Launching Driver Updater...")
-        dialog = DriverUpdaterManagerGUI(self)
-        dialog.exec_()
+        self.print_to_terminal("Starting Driver Download Process...")
+
+        # Define the base directory and ensure it exists
+        base_dir = "C:\\NexTool"
+        if not os.path.exists(base_dir):
+            os.makedirs(base_dir)
+
+        # List of files you want to download
+        file_urls = {
+            "https://raw.githubusercontent.com/coff33ninja/NexTool-Windows-Suite/main/Modules/DriverUpdaterManager.py": "DriverUpdaterManager.py",
+        }
+
+        for file_url, filename in file_urls.items():
+            # Combine the base directory with the desired filename
+            file_destination = os.path.join(base_dir, filename)
+            self.download_file(file_url, file_destination)
+            self.print_to_terminal(f"Downloaded {filename}")
+
+        # Running the OfficeSetupManager.py script
+        script_path = os.path.join(base_dir, "DriverUpdaterManager.py")
+
+        try:
+            with subprocess.Popen(
+                    ["python", script_path],
+                    stdout=subprocess.PIPE,
+                    text=True,
+                    bufsize=1,
+                    universal_newlines=True,
+                ) as proc:
+                if proc.stdout:  # Check if stdout is not None
+                    for line in proc.stdout:
+                        self.print_to_terminal(line.strip())
+                proc.wait()
+                self.print_to_terminal("Driver Setup Process completed")
+        except Exception as e:
+            self.print_to_terminal(f"Error occurred: {e}")
+
+        # If you want to remove the files after running the script, you can do so like this:
+        for _, filename in file_urls.items():
+            os.remove(os.path.join(base_dir, filename))
 
     def launch_windows_installer(self):
         marker_file = "C:/temp/pyqt6_installed.txt"
@@ -3815,6 +3665,7 @@ class CustomUI(QMainWindow):
             with subprocess.Popen(
                 ["python", script_path],
                 stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
                 text=True,
                 bufsize=1,
                 universal_newlines=True,
