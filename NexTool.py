@@ -28,30 +28,22 @@ from PyQt5.QtWidgets import (
     QComboBox,
     QCheckBox,
     QTabWidget,
-    QWidget,
     QTableWidget,
     QTableWidgetItem,
-    QFileDialog,
     QMenu,
     QTextBrowser,
     QPlainTextEdit,
 )
-from PyQt5.QtGui import QFont, QDesktopServices, QGuiApplication
+from PyQt5.QtGui import QFont, QDesktopServices
 from PyQt5.QtCore import (
     Qt,
     QPropertyAnimation,
-    QRect,
     QEasingCurve,
     QThread,
     pyqtSignal,
-    pyqtSlot,
     QObject,
     QTimer,
-    QItemSelectionModel,
-    pyqtSignal,
     QUrl,
-    QObject,
-    QEasingCurve,
 )
 
 # from PyQt5.QtGui import QGraphicsOpacityEffect
@@ -60,17 +52,9 @@ import traceback
 import psutil
 import datetime
 import re
-from typing import Any, Union, Dict, List, Optional, Callable
-from functools import partial
+from typing import Any, Dict, List, Optional
 import json
 import winreg as reg
-import urllib.request
-import zipfile
-import win32serviceutil
-import win32api
-import win32con
-import win32com.client
-import win32service
 sys.path.insert(0, os.path.abspath('..'))
 
 logging.basicConfig(
