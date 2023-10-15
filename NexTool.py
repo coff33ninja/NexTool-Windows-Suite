@@ -2170,7 +2170,6 @@ class WingetGUI(QWidget):
         if reply == QMessageBox.Yes:
             self.manager.run_winget_gui()
 
-
 class WingetManager:
     def __init__(self):
         self.packages = [
