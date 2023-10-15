@@ -2365,130 +2365,6 @@ class WingetManager:
         except Exception as e:
             return f"Error occurred: {e}"
 
-
-class OfficeSetupDialog(QDialog):
-    def __init__(self):
-        super().__init__()
-        self.manager = OfficeSetupManager()
-        self.init_ui()
-
-    def init_ui(self):
-        layout = QVBoxLayout()
-        self.setWindowTitle("Office Tool Plus Setup")
-
-        # Progress bar
-        self.progress_bar = QProgressBar(self)
-        layout.addWidget(self.progress_bar)
-
-        # Terminal-like display
-        self.terminal_display = QTextEdit(self)
-        self.terminal_display.setReadOnly(True)
-        layout.addWidget(self.terminal_display)
-
-        # Install button
-        self.install_button = QPushButton("Setup Office Tool Plus", self)
-        self.install_button.clicked.connect(self.setup_office)
-        layout.addWidget(self.install_button)
-
-        # Set layout
-        self.setLayout(layout)
-
-    def print_to_terminal(self, message):
-        self.terminal_display.append(message)
-
-    def setup_office(self):
-        self.manager.download_and_setup_office(
-            self.print_to_terminal, self.progress_bar
-        )
-
-
-class OfficeSetupManager:
-    BASE_DIR = "C:\\NexTool"
-    TRUSTED_URLS = {
-        "64": "https://github.com/YerongAI/Office-Tool/releases/download/v10.1.10.1/Office_Tool_with_runtime_v10.1.10.1_x64.zip",
-        "32": "https://github.com/YerongAI/Office-Tool/releases/download/v10.1.10.1/Office_Tool_with_runtime_v10.1.10.1_x86.zip",
-    }
-
-    def create_office_config(self, architecture, destination):
-        """Generate Office XML configuration for a given architecture."""
-        xml_content = f"""
-        <Configuration>
-          <Add OfficeClientEdition="{architecture}" Channel="PerpetualVL2021" MigrateArch="true" AllowCdnFallback="true">
-            <Product ID="ProPlus2021Volume">
-              <Language ID="MatchPreviousMSI" />
-              <ExcludeApp ID="Lync" />
-              <ExcludeApp ID="OneDrive" />
-              <ExcludeApp ID="OneNote" />
-              <ExcludeApp ID="Teams" />
-            </Product>
-            <Product ID="ProofingTools">
-              <Language ID="af-za" />
-              <Language ID="en-us" />
-            </Product>
-          </Add>
-          <Display AcceptEULA="True" />
-          <Property Name="PinIconsToTaskbar" Value="True" />
-          <Property Name="ForceAppShutdown" Value="True" />
-          <Updates Enabled="false" />
-          <RemoveMSI />
-          <Extend DownloadFirst="true" CreateShortcuts="true" />
-        </Configuration>
-        """
-
-        with open(destination, "w") as xml_file:
-            xml_file.write(xml_content)
-
-    def download_and_setup_office(self, print_func, progress_bar):
-        print_func("INITIATING OFFICE TOOL PLUS SETUP...")
-
-        arch = platform.architecture()[0]
-        if arch == "64bit":
-            architecture = "64"
-        elif arch == "32bit":
-            architecture = "32"
-        else:
-            print_func(f"Unsupported architecture: {arch}")
-            return
-
-        url = self.TRUSTED_URLS.get(architecture)
-        if not url:
-            print_func("Invalid architecture specified.")
-            return
-
-        office_dir = os.path.join(self.BASE_DIR, f"Office_Tool_{architecture}")
-        if not os.path.exists(office_dir):
-            os.makedirs(office_dir)
-
-        destination_zip = os.path.join(office_dir, "Office_Tool.zip")
-
-        print_func("Attempting to download Office Tool Plus...")
-        try:
-            urllib.request.urlretrieve(url, destination_zip)
-        except Exception as e:
-            print_func(f"Error downloading {url}: {e}")
-            return
-        print_func("Downloaded Office Tool Plus.")
-
-        print_func("Attempting to extract Office Tool Plus...")
-        with zipfile.ZipFile(destination_zip, "r") as zip_ref:
-            zip_ref.extractall(office_dir)
-        print_func("Extracted Office Tool Plus.")
-
-        destination_xml = os.path.join(office_dir, "office_config.xml")
-        self.create_office_config(architecture, destination_xml)
-        print_func("Generated Office XML configuration.")
-
-        try:
-            otp_exe_path = os.path.join(
-                office_dir, "Office Tool", "Office Tool Plus.exe"
-            )
-            subprocess.run([otp_exe_path, "-xml", destination_xml], check=True)
-            print_func("Office Tool Plus launched with XML configuration!")
-        except Exception as e:
-            print_func(
-                f"Error occurred while trying to run Office Tool Plus: {e}")
-
-
 class DriverUpdaterManager(QObject):
     finished = pyqtSignal()
     message_signal = pyqtSignal(str)
@@ -3321,7 +3197,7 @@ class CustomUI(QMainWindow):
                         elif item == "Winget":
                             btn.clicked.connect(self.launch_winget_gui)
                         elif item == "Office Instalations":
-                            btn.clicked.connect(self.launch_Office_Setup_Dialog)
+                            btn.clicked.connect(self.run_office_tool)
                         elif item == "Snappy Driver":
                             btn.clicked.connect(self.launch_driver_updater)
                         elif item == "Windows Install":
@@ -3827,9 +3703,52 @@ class CustomUI(QMainWindow):
         self.winget_gui = WingetGUI()
         self.winget_gui.show()
 
-    def launch_Office_Setup_Dialog(self):
-        dialog = OfficeSetupDialog()
-        dialog.exec_()
+    def run_office_tool(self):
+        self.print_to_terminal("Starting Office Download Process...")
+
+        # Define the base directory and ensure it exists
+        base_dir = "C:\\NexTool"
+        if not os.path.exists(base_dir):
+            os.makedirs(base_dir)
+
+        # List of files you want to download
+        file_urls = {
+            "https://raw.githubusercontent.com/coff33ninja/NexTool-Windows-Suite/main/Modules/OfficeSetupManager.py": "OfficeSetupManager.py",
+        }
+
+        for file_url, filename in file_urls.items():
+            # Combine the base directory with the desired filename
+            file_destination = os.path.join(base_dir, filename)
+            self.download_file(file_url, file_destination)
+            self.print_to_terminal(f"Downloaded {filename}")
+
+        # Assuming the main_app.py is the script you want to run
+        script_path = os.path.join(base_dir, "OfficeSetupManager.py")
+
+        try:
+            with subprocess.Popen(
+                ["python", script_path],
+                stdout=subprocess.PIPE,
+                text=True,
+                bufsize=1,
+                universal_newlines=True,
+            ) as proc:
+                if proc.stdout:  # Check if stdout is not None
+                    for line in proc.stdout:
+                        self.print_to_terminal(line.strip())
+                proc.wait()
+        except Exception as e:
+            self.print_to_terminal(f"Error occurred: {e}")
+
+        # Now, start the process for the OfficeSetupManager
+        self.print_to_terminal("Starting Office Tool Plus setup...")
+
+        def progress_callback(percentage):
+            self.print_to_terminal(f"Progress: {percentage}%")
+
+        # If you want to remove the files after running the script, you can do so like this:
+        for _, filename in file_urls.items():
+            os.remove(os.path.join(base_dir, filename))
 
     def launch_driver_updater(self):
         print("Launching Driver Updater...")
@@ -3993,14 +3912,6 @@ class CustomUI(QMainWindow):
             os.remove(os.path.join(base_dir, filename))
         self.print_to_terminal("Backup/Restore Process completed")
 
-
-#    def launch_AdvancedHardwareInfoApp(self):
-#        self.AdvancedHardwareInfoApp = AdvancedHardwareInfoApp()
-#        self.AdvancedHardwareInfoApp.show()
-
-#    def launch_BackupperApp(self):
-#        self.BackupperApp = BackupperApp()
-#        self.BackupperApp.show()
 
 
 tabs = {
