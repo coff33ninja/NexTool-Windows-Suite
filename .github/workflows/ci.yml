@@ -1,0 +1,24 @@
+name: CI
+
+on: [push, pull_request]
+
+jobs:
+  format:
+    runs-on: windows-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v2
+
+    - name: Set up Python
+      uses: actions/setup-python@v2
+      with:
+        python-version: 3.9 # or any version you prefer
+
+    - name: Install black
+      run: |
+        pip install black
+
+    - name: Check code formatting with black
+      run: |
+        black --check .
