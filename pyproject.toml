@@ -17,6 +17,7 @@ pyqt5-stubs = "^5.15.6.0"
 pyqtgraph = "^0.13.3"
 pyqt6 = "^6.5.3"
 pyqt6-tools = "^6.4.0"
+pyinstaller = "^6.1.0"
 
 
 [build-system]
