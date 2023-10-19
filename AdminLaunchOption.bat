@@ -159,14 +159,6 @@ echo Installing Python 3.11... >> %LOGFILE%
 C:\Temp\python-3.11.6-amd64.exe /quiet InstallAllUsers=1 PrependPath=1
 del /f "C:\Temp\python-3.11.6-amd64.exe"
 echo Python 3.11 installation completed >> %LOGFILE%
-        echo Installing Python 3.11... >> %LOGFILE%
-        C:\Temp\python-3.11.6-amd64.exe /quiet InstallAllUsers=1 PrependPath=1
-        del /f "C:\Temp\python-3.11.6-amd64.exe"
-        echo Python 3.11 installation completed >> %LOGFILE%
-    ) else (
-        echo Skipping Python installation >> %LOGFILE%
-    )
-)
 
 cls
 
