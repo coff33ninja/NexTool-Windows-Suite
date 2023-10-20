@@ -199,6 +199,9 @@ if errorlevel 1 (
     echo Error: Failed to install/upgrade pyqt5-tools >> %LOGFILE%
 ) else (
     echo Success: pyqt5-tools installed/upgraded successfully >> %LOGFILE%
+    echo Error: Failed to install/upgrade pyqt5-tools >> %LOGFILE%
+) else (
+    echo Success: pyqt5-tools installed/upgraded successfully >> %LOGFILE%
 )
 
 echo Installing/upgrading PyQt5-stubs for Python 3.11... >> %LOGFILE%
@@ -240,6 +243,8 @@ if errorlevel 1 (
 ) else (
     echo Success: pywin32 installed/upgraded successfully >> %LOGFILE%
 )
+
+
 
 :LoggPreview
 echo. >> %LOGFILE%
