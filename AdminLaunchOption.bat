@@ -41,6 +41,7 @@ if "%errorlevel%" NEQ "0" (
     pause
     exit /B
 )
+cd /D "C:\NexTool"
 
 :: Check and Install Chocolatey
 echo %date% %time% - Checking Chocolatey installation >> %LOGFILE%
@@ -71,6 +72,7 @@ IF NOT DEFINED ARIA2C_VERSION (
 ) ELSE (
     echo aria2c version: %ARIA2C_VERSION% already installed >> %LOGFILE%
 )
+goto CheckPowershellCore
 
 :CheckPowershellCore
 echo %date% %time% - Checking PowerShell Core installation >> %LOGFILE%
@@ -82,10 +84,25 @@ IF NOT DEFINED POWERSHELLCORE_VERSION (
     echo PowerShell Core version: %POWERSHELLCORE_VERSION% already installed >> %LOGFILE%
     choco upgrade powershell-core -y -n
 )
+cls && goto CheckforPython3.11
 
-:: Direct link to Python 3.11.6 installer
-set PYTHON_INSTALLER_PATH=C:\NexTool\python-3.11.6-amd64.exe
-set PYTHON_INSTALLER_URL=https://www.python.org/ftp/python/3.11.6/python-3.11.6-amd64.exe
+:CheckforPython3.11
+echo Checking for Python in PATH... >> %LOGFILE%
+echo Checking for Python in PATH...
+set python_path=C:\Python311\python.exe
+if exist "!python_path!" (
+    echo Found !python_path! >> %LOGFILE%
+    echo Found !python_path!
+    "!python_path!" --version >> %LOGFILE%
+    "!python_path!" --version
+    echo. >> %LOGFILE%
+    echo.
+    goto Beginactualscriptcommands
+) else (
+    echo Python 3.11.6 not found at expected location. >> %LOGFILE%
+    goto DownloadPython
+)
+
 
 :: Refactored Download Function
 :DownloadFile
@@ -110,12 +127,18 @@ if "%errorlevel%"=="0" (
     goto :eof
 )
 
+:DownloadPython
+:: Direct link to Python 3.11.6 installer
+set PYTHON_INSTALLER_PATH=python-3.11.6-amd64.exe
+set PYTHON_INSTALLER_URL=https://www.python.org/ftp/python/3.11.6/python-3.11.6-amd64.exe
+
 :: For Python installer
 call :DownloadFile %PYTHON_INSTALLER_URL% %PYTHON_INSTALLER_PATH%
 if "%DOWNLOAD_RESULT%"=="1" (
     echo All above methods failed. Proceeding to manual method >> %LOGFILE%
     goto PythonDownloadCheck
 )
+pause
 
 :: Install Python
 echo %date% %time% - Installing Python 3.11.6... >> %LOGFILE%
@@ -125,7 +148,7 @@ if "%errorlevel%"=="0" (
     goto CheckforPython3.11
 ) else (
     echo %date% %time% - Failed to install Python 3.11.6. Aborting... >> %LOGFILE%
-    goto :eof
+    goto :PythonDownloadCheck
 )
 
 
@@ -149,9 +172,9 @@ if not exist "!PYTHON_INSTALLER_PATH!" (
     pause
 )
 
-cls && goto CheckforPython3.11
+cls && goto VerifyPython3.11
 
-:CheckforPython3.11
+:VerifyPython3.11
 echo Checking for Python in PATH... >> %LOGFILE%
 echo Checking for Python in PATH...
 set python_path=C:\Python311\python.exe
@@ -196,9 +219,6 @@ if errorlevel 1 (
 echo Installing/upgrading pyqt5-tools for Python 3.11... >> %LOGFILE%
 "!python_path!" -m pip install --upgrade pyqt5-tools
 if errorlevel 1 (
-    echo Error: Failed to install/upgrade pyqt5-tools >> %LOGFILE%
-) else (
-    echo Success: pyqt5-tools installed/upgraded successfully >> %LOGFILE%
     echo Error: Failed to install/upgrade pyqt5-tools >> %LOGFILE%
 ) else (
     echo Success: pyqt5-tools installed/upgraded successfully >> %LOGFILE%
@@ -269,15 +289,15 @@ cls && goto :Links
 
 :Links
 :: For NexTool.py
-set NexToolDestination=C:\NexTool\NexTool.py
+set NexToolDestination=NexTool.py
 set NexToolURL=https://raw.githubusercontent.com/coff33ninja/NexTool-Windows-Suite/main/NexTool.py
 
 call :DownloadFile %NexToolURL% %NexToolDestination%
 if "%DOWNLOAD_RESULT%"=="1" (
     :: Handle error here for NexTool.py
-    goto :eof
+    goto :Launch
 )
-
+:Launch
 :: Run the chosen Python version for your script
 if exist "%NexToolDestination%" (
     echo Launching NexTool.py
