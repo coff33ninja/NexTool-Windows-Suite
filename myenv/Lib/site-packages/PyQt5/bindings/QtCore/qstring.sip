@@ -21,7 +21,7 @@
 
 
 // QString mapped type.
-%MappedType QString /AllowNone,TypeHint="str",TypeHintValue="''"/
+%MappedType QString /AllowNone, TypeHintIn="Optional[str]", TypeHintOut="str", TypeHintValue="''"/
 {
 %TypeHeaderCode
 #include <qstring.h>

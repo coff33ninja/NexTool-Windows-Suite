@@ -116,7 +116,7 @@ public:
         }
 %End
 
-    void setPoints(int firstx, int firsty, ...);
+    void setPoints(int firstx, int firsty, ... /TypeHint="int"/);
 %MethodCode
         // Accept at least one pair of integer coordinates.
         int nPoints = 1 + ((PyTuple_Size(a2) + 1) >> 1);
@@ -134,7 +134,7 @@ public:
         delete[] points;
 %End
 
-    void putPoints(int index, int firstx, int firsty, ...);
+    void putPoints(int index, int firstx, int firsty, ... /TypeHint="int"/);
 %MethodCode
         // Accept at least one pair of integer coordinates.
         int nPoints = 1 + ((PyTuple_Size(a3) + 1) >> 1);

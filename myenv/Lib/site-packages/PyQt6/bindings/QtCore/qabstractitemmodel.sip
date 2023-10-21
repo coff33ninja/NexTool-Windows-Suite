@@ -259,6 +259,7 @@ public:
     typedef QFlags<QAbstractItemModel::CheckIndexOption> CheckIndexOptions;
     bool checkIndex(const QModelIndex &index, QAbstractItemModel::CheckIndexOptions options = QAbstractItemModel::CheckIndexOption::NoOption) const;
     virtual bool clearItemData(const QModelIndex &index);
+    virtual void multiData(const QModelIndex &index, QModelRoleDataSpan roleDataSpan) const;
 };
 
 class QAbstractTableModel : QAbstractItemModel
@@ -314,4 +315,43 @@ public:
     const QVariant &data() const;
     void setData(const QVariant &data);
     void clearData();
+};
+
+class QModelRoleDataSpan
+{
+%TypeHeaderCode
+// The capsule destructor for a QModelRoleData array.
+static void qpycore_gc_modelroledata(PyObject *mrd_obj);
+%End
+
+%TypeCode
+// The capsule destructor for a QModelRoleData array.
+static void qpycore_gc_modelroledata(PyObject *mrd_obj)
+{
+    delete[] reinterpret_cast<QList<QModelRoleData>* >(PyCapsule_GetPointer(mrd_obj, NULL));
+}
+%End
+
+public:
+    QModelRoleDataSpan();
+    QModelRoleDataSpan(QModelRoleData &modelRoleData);
+    QModelRoleDataSpan(QList<QModelRoleData> modelRoleData);
+%MethodCode
+        PyObject *a0cap = PyCapsule_New(a0, NULL, qpycore_gc_modelroledata);
+        
+        if (a0cap)
+        {
+            sipSetUserObject((sipSimpleWrapper *)sipSelf, a0cap);
+            
+            sipCpp = new QModelRoleDataSpan(*a0);
+        }
+%End
+
+    qsizetype size() const;
+    qsizetype length() const /__len__/;
+    QModelRoleData *data() const;
+    QModelRoleData *begin() const;
+    QModelRoleData *end() const;
+    QModelRoleData &operator[](qsizetype index) const;
+    QVariant *dataForRole(int role) const;
 };

@@ -38,18 +38,8 @@ public:
     void setDuplicatesEnabled(bool enable);
     void setFrame(bool);
     bool hasFrame() const;
-%If (Qt_6_2_0 -)
-    int findText(const QString &text, Qt::MatchFlags flags = static_cast<QFlags<Qt::MatchFlag>>(Qt::MatchExactly | Qt::MatchCaseSensitive)) const;
-%End
-%If (- Qt_6_2_0)
     int findText(const QString &text, Qt::MatchFlags flags = Qt::MatchExactly|Qt::MatchCaseSensitive) const;
-%End
-%If (Qt_6_2_0 -)
-    int findData(const QVariant &data, int role = Qt::UserRole, Qt::MatchFlags flags = static_cast<QFlags<Qt::MatchFlag>>(Qt::MatchExactly | Qt::MatchCaseSensitive)) const;
-%End
-%If (- Qt_6_2_0)
     int findData(const QVariant &data, int role = Qt::UserRole, Qt::MatchFlags flags = Qt::MatchExactly|Qt::MatchCaseSensitive) const;
-%End
 
     enum InsertPolicy
     {

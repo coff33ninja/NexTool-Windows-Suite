@@ -20,10 +20,26 @@ Column {
             }
 
             SecondColumnLayout {
-                IdComboBox {
+                ItemFilterComboBox {
                     typeFilter: "QtQuick3D.View3D"
                     backendValue: backendValues.source
                     implicitWidth: StudioTheme.Values.singleControlColumnWidth
+                                   + StudioTheme.Values.actionIndicatorWidth
+                }
+
+                ExpandingSpacer {}
+            }
+
+            PropertyLabel {
+                text: qsTr("Detailed Mode")
+                tooltip: qsTr("Enables detailed mode, which shows more detailed resource usage statistics.")
+            }
+
+            SecondColumnLayout {
+                CheckBox {
+                    text: backendValues.resourceDetailsVisible.valueToString
+                    backendValue: backendValues.resourceDetailsVisible
+                    implicitWidth: StudioTheme.Values.twoControlColumnWidth
                                    + StudioTheme.Values.actionIndicatorWidth
                 }
 

@@ -188,6 +188,9 @@ public:
         TouchBegin,
         TouchUpdate,
         TouchEnd,
+%If (Qt_5_2_0 -)
+        NativeGesture,
+%End
         RequestSoftwareInputPanel,
         CloseSoftwareInputPanel,
         WinIdChange,
@@ -213,6 +216,8 @@ public:
 %If (Qt_5_9_0 -)
         TabletTrackingChange,
 %End
+        EnterEditFocus,
+        LeaveEditFocus,
         User,
         MaxUser,
     };

@@ -18,11 +18,7 @@
 // WARRANTY OF DESIGN, MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE.
 
 
-// Note that the typing module doesn't have the means for describing objects
-// that implement the buffer protocol.  We therefore just document the common
-// cases for documentation purposes even though all of them are accessed via
-// the buffer protocol.
-%MappedType QByteArrayView /TypeHint="Union[QByteArray, bytes, bytearray, memoryview]"/
+%MappedType QByteArrayView /TypeHint="QByteArray"/
 {
 %TypeHeaderCode
 #include <qbytearrayview.h>

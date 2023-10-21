@@ -1541,6 +1541,27 @@ namespace Qt
         RoundPreferFloor,
         PassThrough,
     };
+
+%If (Qt_6_5_0 -)
+
+    enum class ColorScheme
+    {
+        Unknown,
+        Light,
+        Dark,
+    };
+
+%End
+%If (Qt_6_5_0 -)
+
+    enum class PermissionStatus
+    {
+        Undetermined,
+        Granted,
+        Denied,
+    };
+
+%End
 };
 
 class QKeyCombination

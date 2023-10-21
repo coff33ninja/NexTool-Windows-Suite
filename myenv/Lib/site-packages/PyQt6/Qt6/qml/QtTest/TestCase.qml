@@ -224,6 +224,81 @@ import "testlogger.js" as TestLogger
     of \l Component, the \l createTemporaryObject() function can be used.
 
     \sa {QtTest::SignalSpy}{SignalSpy}, {Qt Quick Test}
+
+    \section1 Separating tests from application logic
+
+    In most cases, you would want to separate your tests from the application
+    logic by splitting them into different projects and linking them.
+
+    For example, you could have the following project structure:
+
+    \badcode
+    .
+    | — CMakeLists.txt
+    | — src
+    |  | — main.cpp
+    | — qml
+    |  | — main.qml
+    | — modules
+    |  | — MyModule
+    |     | — MyButton.qml
+    |     | — CMakeLists.txt
+    | — tests
+       | — UnitQMLTests
+          | — tst_testqml.qml
+          | — main.cpp
+          | — setup.cpp
+          | — setup.h
+    \endcode
+
+    Now, to test the \c modules/MyModule/MyButton.qml, create a library for
+    \c MyModule in \c modules/MyModule/CMakeLists.txt and link it to your
+    test project, \c tests/UnitQMLTests/CMakeLists.txt:
+
+    \if defined(onlinedocs)
+        \tab {build-qt-app}{tab-cmake-add-library}{modules/MyModule/MyButton.qml}{checked}
+        \tab {build-qt-app}{tab-cmake-link-against-library}{tests/UnitQMLTests/CMakeLists.txt}{}
+        \tabcontent {tab-cmake-add-library}
+    \else
+        \section1 Add library
+    \endif
+    \dots
+    \snippet modules_MyModule_CMakeLists.txt add library
+    \dots
+    \if defined(onlinedocs)
+        \endtabcontent
+        \tabcontent {tab-cmake-link-against-library}
+    \else
+        \section1 Link against library
+    \endif
+    \dots
+    \snippet tests_UnitQMLTests_CMakeLists.txt link against library
+    \dots
+    \if defined(onlinedocs)
+        \endtabcontent
+    \endif
+
+    Then, in your \c tests/UnitQMLTests/tst_testqml.qml, you can import your
+    \c modules/MyModule/MyButton.qml:
+
+    \if defined(onlinedocs)
+        \tab {test-qml}{tab-qml-import}{tests/UnitQMLTests/tst_testqml.qml}{checked}
+        \tab {test-qml}{tab-qml-my-button}{modules/MyModule/MyButton.qml}{}
+        \tabcontent {tab-qml-import}
+    \else
+        \section1 Import QML
+    \endif
+    \snippet tests_UnitQMLTests_tst_testqml.qml import
+    \if defined(onlinedocs)
+        \endtabcontent
+        \tabcontent {tab-qml-my-button}
+    \else
+        \section1 Define QML button
+    \endif
+    \snippet modules_MyModule_MyButton.qml define
+    \if defined(onlinedocs)
+        \endtabcontent
+    \endif
 */
 
 
@@ -485,16 +560,21 @@ Item {
 
     /*!
         \since 5.13
-        \qmlmethod bool TestCase::isPolishScheduled(object item)
+        \qmlmethod bool TestCase::isPolishScheduled(object itemOrWindow)
 
-        Returns \c true if \l {QQuickItem::}{updatePolish()} has not been called
-        on \a item since the last call to \l {QQuickItem::}{polish()},
-        otherwise returns \c false.
+        If \a itemOrWindow is an \l Item, this function returns \c true if
+        \l {QQuickItem::}{updatePolish()} has not been called on it since the
+        last call to \l {QQuickItem::}{polish()}, otherwise returns \c false.
+
+        Since Qt 6.5, if \a itemOrWindow is a \l Window, this function returns
+        \c true if \l {QQuickItem::}{updatePolish()} has not been called on any
+        item it manages since the last call to \l {QQuickItem::}{polish()} on
+        those items, otherwise returns \c false.
 
         When assigning values to properties in QML, any layouting the item
         must do as a result of the assignment might not take effect immediately,
         but can instead be postponed until the item is polished. For these cases,
-        you can use this function to ensure that the item has been polished
+        you can use this function to ensure that items have been polished
         before the execution of the test continues. For example:
 
         \code
@@ -509,20 +589,21 @@ Item {
         makes it obvious why an item wasn't polished and allows tests to
         fail early under such circumstances.
 
-        \sa waitForItemPolished(), QQuickItem::polish(), QQuickItem::updatePolish()
+        \sa waitForPolish(), QQuickItem::polish(), QQuickItem::updatePolish()
     */
-    function isPolishScheduled(item) {
-        if (!item || typeof item !== "object") {
-            qtest_results.fail("Argument must be a valid Item; actual type is " + typeof item,
+    function isPolishScheduled(itemOrWindow) {
+        if (!itemOrWindow || typeof itemOrWindow !== "object") {
+            qtest_results.fail("Argument must be a valid Item or Window; actual type is " + typeof itemOrWindow,
                 util.callerFile(), util.callerLine())
             throw new Error("QtQuickTest::fail")
         }
 
-        return qtest_results.isPolishScheduled(item)
+        return qtest_results.isPolishScheduled(itemOrWindow)
     }
 
     /*!
         \since 5.13
+        \deprecated [6.5] Use \l waitForPolish() instead.
         \qmlmethod bool waitForItemPolished(object item, int timeout = 5000)
 
         Waits for \a timeout milliseconds or until
@@ -534,8 +615,29 @@ Item {
         \sa isPolishScheduled(), QQuickItem::polish(), QQuickItem::updatePolish()
     */
     function waitForItemPolished(item, timeout) {
-        if (!item || typeof item !== "object") {
-            qtest_results.fail("First argument must be a valid Item; actual type is " + typeof item,
+        return waitForPolish(item, timeout)
+    }
+
+    /*!
+        \since 6.5
+        \qmlmethod bool waitForPolish(object windowOrItem, int timeout = 5000)
+
+        If \a windowOrItem is an Item, this functions waits for \a timeout
+        milliseconds or until \c isPolishScheduled(windowOrItem) returns \c false.
+        Returns \c true if \c isPolishScheduled(windowOrItem) returns \c false within
+        \a timeout milliseconds, otherwise returns \c false.
+
+        If \c windowOrItem is a Window, this functions waits for \c timeout
+        milliseconds or until \c isPolishScheduled() returns \c false for
+        all items managed by the window. Returns \c true if
+        \c isPolishScheduled() returns \c false for all items within
+        \a timeout milliseconds, otherwise returns \c false.
+
+        \sa isPolishScheduled(), QQuickItem::polish(), QQuickItem::updatePolish()
+    */
+    function waitForPolish(windowOrItem, timeout) {
+        if (!windowOrItem || typeof windowOrItem !== "object") {
+            qtest_results.fail("First argument must be a valid Item or Window; actual type is " + typeof windowOrItem,
                 util.callerFile(), util.callerLine())
             throw new Error("QtQuickTest::fail")
         }
@@ -549,7 +651,7 @@ Item {
         if (!timeout)
             timeout = 5000
 
-        return qtest_results.waitForItemPolished(item, timeout)
+        return qtest_results.waitForPolish(windowOrItem, timeout)
     }
 
     /*!
@@ -1838,7 +1940,15 @@ Item {
 
     /*! \internal */
     function qtest_run() {
-        if (TestLogger.log_start_test()) {
+        if (!when || completed || running || !qtest_componentCompleted)
+            return;
+
+        if (!TestLogger.log_can_start_test(qtest_testId)) {
+            console.error("Interleaved test execution detected. This shouldn't happen")
+            return;
+        }
+
+        if (TestLogger.log_start_test(qtest_testId)) {
             qtest_results.reset()
             qtest_results.testCaseName = name
             qtest_results.startLogging()
@@ -2009,8 +2119,8 @@ Item {
     onWhenChanged: {
         if (when != qtest_prevWhen) {
             qtest_prevWhen = when
-            if (when && !completed && !running && qtest_componentCompleted)
-                qtest_run()
+            if (when)
+                TestSchedule.testCases.push(testCase)
         }
     }
 
@@ -2030,7 +2140,7 @@ Item {
         if (optional)
             TestLogger.log_optional_test(qtest_testId)
         qtest_prevWhen = when
-        if (when && !completed && !running)
-            qtest_run()
+        if (when)
+            TestSchedule.testCases.push(testCase)
     }
 }

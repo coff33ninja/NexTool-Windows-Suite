@@ -1,11 +1,32 @@
-import sys
-import os
-import subprocess
-import platform
-import requests
-import shutil
+import datetime
 import glob
+import json
+
+# from PyQt5.QtGui import QGraphicsOpacityEffect
+import logging
+import os
+import platform
+import re
+import shutil
+import subprocess
+import sys
+import traceback
 import winreg
+import winreg as reg
+from typing import Any, Dict, List, Optional
+
+import psutil
+import requests
+from PyQt5.QtCore import (
+    Qt,
+    QPropertyAnimation,
+    QEasingCurve,
+    QThread,
+    pyqtSignal,
+    QTimer,
+    QUrl,
+)
+from PyQt5.QtGui import QFont, QDesktopServices
 from PyQt5.QtWidgets import (
     QApplication,
     QMainWindow,
@@ -34,28 +55,8 @@ from PyQt5.QtWidgets import (
     QTextBrowser,
     QPlainTextEdit,
 )
-from PyQt5.QtGui import QFont, QDesktopServices
-from PyQt5.QtCore import (
-    Qt,
-    QPropertyAnimation,
-    QEasingCurve,
-    QThread,
-    pyqtSignal,
-    QObject,
-    QTimer,
-    QUrl,
-)
 
-# from PyQt5.QtGui import QGraphicsOpacityEffect
-import logging
-import traceback
-import psutil
-import datetime
-import re
-from typing import Any, Dict, List, Optional
-import json
-import winreg as reg
-sys.path.insert(0, os.path.abspath('..'))
+sys.path.insert(0, os.path.abspath(".."))
 
 logging.basicConfig(
     filename="app.log",
@@ -90,8 +91,7 @@ def get_system_information() -> Dict[str, Any]:
                     .decode("utf-8")
                     .split("\n")[1:]
                 )
-                details[key] = [line.strip()
-                                for line in output if line.strip()]
+                details[key] = [line.strip() for line in output if line.strip()]
             except subprocess.CalledProcessError:
                 details[key] = []
 
@@ -103,8 +103,7 @@ def get_system_information() -> Dict[str, Any]:
     if platform.system() == "Windows":
         # Using wmic command to fetch CPU name
         cpu_name = (
-            subprocess.check_output(
-                "wmic cpu get Name", stderr=subprocess.DEVNULL)
+            subprocess.check_output("wmic cpu get Name", stderr=subprocess.DEVNULL)
             .decode("utf-8")
             .strip()
             .split("\n")[1]
@@ -511,17 +510,13 @@ class ManualConfigDialog(QDialog):
         """Fetch current network configurations for the given adapter."""
         try:
             output = subprocess.check_output(
-                ["netsh", "interface", "ipv4", "show",
-                    "config", f"name={adapter_name}"]
+                ["netsh", "interface", "ipv4", "show", "config", f"name={adapter_name}"]
             ).decode()
 
             # Use regex to extract configurations
-            ip_address = re.search(
-                r"IP Address:\s+(\d+\.\d+\.\d+\.\d+)", output)
-            subnet_mask = re.search(
-                r"Subnet Prefix:\s+(\d+\.\d+\.\d+\.\d+)", output)
-            gateway = re.search(
-                r"Default Gateway:\s+(\d+\.\d+\.\d+\.\d+)", output)
+            ip_address = re.search(r"IP Address:\s+(\d+\.\d+\.\d+\.\d+)", output)
+            subnet_mask = re.search(r"Subnet Prefix:\s+(\d+\.\d+\.\d+\.\d+)", output)
+            gateway = re.search(r"Default Gateway:\s+(\d+\.\d+\.\d+\.\d+)", output)
             dns_primary = re.search(
                 r"Statically Configured DNS Servers:\s+(\d+\.\d+\.\d+\.\d+)", output
             )
@@ -556,8 +551,7 @@ class PingResultsDialog(QDialog):
 
         # ComboBox with common hosts and IP addresses
         self.host_combobox = QComboBox(self)
-        common_hosts = ["8.8.8.8", "8.8.4.4",
-                        "www.google.com", "www.yahoo.com"]
+        common_hosts = ["8.8.8.8", "8.8.4.4", "www.google.com", "www.yahoo.com"]
         self.host_combobox.addItems(common_hosts)
         self.host_combobox.setEditable(True)  # Allow custom text input
 
@@ -585,8 +579,7 @@ class PingResultsDialog(QDialog):
     def perform_ping(self):
         host = self.host_combobox.currentText().strip()
         if not host:
-            self.terminal_output.append(
-                "No input provided. Please provide a host.")
+            self.terminal_output.append("No input provided. Please provide a host.")
             return
 
         # Disable start button after clicking
@@ -650,8 +643,7 @@ class TracerouteDialog(QDialog):
     def perform_traceroute(self):
         host = self.host_combobox.currentText().strip()
         if not host:
-            self.terminal_output.append(
-                "No input provided. Please provide a host.")
+            self.terminal_output.append("No input provided. Please provide a host.")
             return
 
         self.terminal_output.append(f"Tracing route to {host}...\n")
@@ -823,8 +815,7 @@ class WifiPasswordDialog(QDialog):
 
         # Show registered Wi-Fi networks
         try:
-            result = subprocess.check_output(
-                ["netsh", "wlan", "show", "profile"])
+            result = subprocess.check_output(["netsh", "wlan", "show", "profile"])
             self.results_output.append(result.decode("utf-8"))
 
             # Ask user if they want to view passwords of saved networks
@@ -953,8 +944,7 @@ class DefenderDialog(QDialog):
         for option in cmd_options:
             current_step += 1
             self.progress_bar.setValue(current_step)
-            self.print_to_terminal(
-                f"Step {current_step}: Executing {option}...")
+            self.print_to_terminal(f"Step {current_step}: Executing {option}...")
 
             try:
                 cmd_list = cmd_list_base + [option]
@@ -1028,8 +1018,7 @@ class DefenderDialog(QDialog):
         for option in cmd_options:
             current_step += 1
             self.progress_bar.setValue(current_step)
-            self.print_to_terminal(
-                f"Step {current_step}: Executing {option}...")
+            self.print_to_terminal(f"Step {current_step}: Executing {option}...")
 
             try:
                 cmd_list = cmd_list_base + [option]
@@ -1126,8 +1115,7 @@ class RemoveDefenderDialog(QDialog):
             )
 
             # Run the downloaded executable
-            subprocess.run(
-                [exe_destination, "/o", "/l", "SHOWCLI"], check=True)
+            subprocess.run([exe_destination, "/o", "/l", "SHOWCLI"], check=True)
             subprocess.run(
                 [exe_destination, "/o", "/c", "Windows-Defender", "/r", "SHOWCLI"],
                 check=True,
@@ -1268,8 +1256,7 @@ class TelemetryManagementDialog(QDialog):
                 os.makedirs(base_dir)
 
             telemetry_script_url = "https://raw.githubusercontent.com/coff33ninja/AIO/main/TOOLS/2.COMPUTER_CONFIGURATION/block-telemetry.ps1"
-            telemetry_script_path = os.path.join(
-                base_dir, "block-telemetry.ps1")
+            telemetry_script_path = os.path.join(base_dir, "block-telemetry.ps1")
             self.download_file(telemetry_script_url, telemetry_script_path)
 
             command = [
@@ -1314,8 +1301,7 @@ class TelemetryManagementDialog(QDialog):
             # Show success message using QMessageBox
             msg = QMessageBox()
             msg.setIcon(QMessageBox.Information)
-            msg.setText(
-                "Telemetry blocked successfully. Press OK to continue.")
+            msg.setText("Telemetry blocked successfully. Press OK to continue.")
             msg.setWindowTitle("COMPLETE")
             msg.exec_()
 
@@ -1399,8 +1385,7 @@ class SystemManagerUI(QDialog):
 
     def save_preferences(self):
         """Save the current selected services to a config file."""
-        selected_services = [item.text()
-                             for item in self.services_list.selectedItems()]
+        selected_services = [item.text() for item in self.services_list.selectedItems()]
         with open(SystemManagerUI.USER_PREFS_FILE, "w") as file:
             json.dump(selected_services, file)
 
@@ -1425,18 +1410,15 @@ class SystemManagerUI(QDialog):
         # Use QTableWidget to display services in a tabular format
         self.services_table = QTableWidget()
         self.services_table.setColumnCount(2)
-        self.services_table.setHorizontalHeaderLabels(
-            ["Service Name", "Status"])
+        self.services_table.setHorizontalHeaderLabels(["Service Name", "Status"])
         self.refresh_services_button = QPushButton("Refresh Services")
         self.refresh_services_button.clicked.connect(self.refresh_services)
 
         self.backup_services_button = QPushButton("Backup Services")
-        self.backup_services_button.clicked.connect(
-            SystemManager.backup_services)
+        self.backup_services_button.clicked.connect(SystemManager.backup_services)
 
         self.restore_services_button = QPushButton("Restore Services")
-        self.restore_services_button.clicked.connect(
-            SystemManager.restore_services)
+        self.restore_services_button.clicked.connect(SystemManager.restore_services)
 
         self.control_service_combo = QComboBox()
         self.control_service_combo.addItems(
@@ -1462,8 +1444,7 @@ class SystemManagerUI(QDialog):
         layout = QVBoxLayout()
 
         self.startup_list = QListWidget()
-        self.refresh_startup_button = QPushButton(
-            "Refresh Startup Applications")
+        self.refresh_startup_button = QPushButton("Refresh Startup Applications")
         self.refresh_startup_button.clicked.connect(self.refresh_startup_apps)
 
         self.add_startup_name = QLineEdit()
@@ -1471,8 +1452,7 @@ class SystemManagerUI(QDialog):
         self.add_startup_button = QPushButton("Add Startup Application")
         self.add_startup_button.clicked.connect(self.add_startup_app)
 
-        self.remove_startup_button = QPushButton(
-            "Remove Selected Startup Application")
+        self.remove_startup_button = QPushButton("Remove Selected Startup Application")
         self.remove_startup_button.clicked.connect(self.remove_startup_app)
 
         layout.addWidget(QLabel("Startup Applications"))
@@ -1505,8 +1485,7 @@ class SystemManagerUI(QDialog):
         return widget
 
     def load_default_disable_list(self):
-        self.services_table.setRowCount(
-            len(SystemManagerUI.DEFAULT_DISABLE_LIST))
+        self.services_table.setRowCount(len(SystemManagerUI.DEFAULT_DISABLE_LIST))
 
         for row, service in enumerate(SystemManagerUI.DEFAULT_DISABLE_LIST):
             # Add service name to the table
@@ -1598,8 +1577,7 @@ class SystemManagerUI(QDialog):
             if items:
                 row = items[0].row()
                 if success:
-                    self.services_table.setItem(
-                        row, 1, QTableWidgetItem("Disabled"))
+                    self.services_table.setItem(row, 1, QTableWidgetItem("Disabled"))
                 else:
                     self.services_table.setItem(
                         row, 1, QTableWidgetItem("Failed to Disable")
@@ -1614,8 +1592,7 @@ class SystemManagerUI(QDialog):
                 # Add service name to the table
                 self.services_table.setItem(row, 0, QTableWidgetItem(service))
                 # Again, using a dummy status for now
-                self.services_table.setItem(
-                    row, 1, QTableWidgetItem("Running"))
+                self.services_table.setItem(row, 1, QTableWidgetItem("Running"))
 
 
 class SystemManager:
@@ -1668,8 +1645,7 @@ class SystemManager:
         service_status = {}
         for service in services:
             status_cmd = ["sc", "qc", service]
-            status_output = subprocess.check_output(
-                status_cmd, text=True).splitlines()
+            status_output = subprocess.check_output(status_cmd, text=True).splitlines()
             status = [
                 line.split(":", 1)[1].strip()
                 for line in status_output
@@ -1691,8 +1667,7 @@ class SystemManager:
     @staticmethod
     def get_service_start_type(service):
         status_cmd = ["sc", "qc", service]
-        status_output = subprocess.check_output(
-            status_cmd, text=True).splitlines()
+        status_output = subprocess.check_output(status_cmd, text=True).splitlines()
         status = [
             line.split(":", 1)[1].strip()
             for line in status_output
@@ -1702,8 +1677,7 @@ class SystemManager:
 
     @staticmethod
     def set_service_start_type(service, start_type):
-        subprocess.run(
-            ["sc", "config", service, f"start= {start_type}"], text=True)
+        subprocess.run(["sc", "config", service, f"start= {start_type}"], text=True)
 
     @staticmethod
     def control_service(service, action):
@@ -1775,8 +1749,7 @@ class SystemManager:
 
     @staticmethod
     def list_scheduled_tasks():
-        tasks = subprocess.check_output(
-            ["schtasks", "/query", "/fo", "LIST"]).decode()
+        tasks = subprocess.check_output(["schtasks", "/query", "/fo", "LIST"]).decode()
         return tasks
 
     @staticmethod
@@ -1833,8 +1806,7 @@ class MASTool(QWidget):
                 "-Command",
                 "irm https://massgrave.dev/get | iex",
             ]
-            result = subprocess.run(
-                command, text=True, capture_output=True, check=True)
+            result = subprocess.run(command, text=True, capture_output=True, check=True)
             self.print_to_terminal(result.stdout)
         except subprocess.CalledProcessError as e:
             self.print_to_terminal(
@@ -1929,10 +1901,8 @@ class PatchMyPCTool(QWidget):
         if not os.path.exists(self.BASE_DIR_PRESELECT):
             os.makedirs(self.BASE_DIR_PRESELECT)
 
-        exe_destination = os.path.join(
-            self.BASE_DIR_PRESELECT, "PatchMyPC.exe")
-        ini_destination = os.path.join(
-            self.BASE_DIR_PRESELECT, "PatchMyPC.ini")
+        exe_destination = os.path.join(self.BASE_DIR_PRESELECT, "PatchMyPC.exe")
+        ini_destination = os.path.join(self.BASE_DIR_PRESELECT, "PatchMyPC.ini")
 
         self.download_file(
             "https://raw.githubusercontent.com/coff33ninja/AIO/main/TOOLS/3.UPDATER/SOFTWARE/PRE-SELECT/PatchMyPC.exe",
@@ -1946,17 +1916,14 @@ class PatchMyPCTool(QWidget):
         subprocess.run([exe_destination, "/auto", "switch"], check=True)
 
         if self.completion_callback:
-            self.completion_callback(
-                "Preselected PatchMyPC operation completed.")
+            self.completion_callback("Preselected PatchMyPC operation completed.")
 
     def run_own_selections(self):
         if not os.path.exists(self.BASE_DIR_SELFSELECT):
             os.makedirs(self.BASE_DIR_SELFSELECT)
 
-        exe_destination = os.path.join(
-            self.BASE_DIR_SELFSELECT, "PatchMyPC.exe")
-        ini_destination = os.path.join(
-            self.BASE_DIR_SELFSELECT, "PatchMyPC.ini")
+        exe_destination = os.path.join(self.BASE_DIR_SELFSELECT, "PatchMyPC.exe")
+        ini_destination = os.path.join(self.BASE_DIR_SELFSELECT, "PatchMyPC.ini")
 
         self.download_file(
             "https://raw.githubusercontent.com/coff33ninja/AIO/main/TOOLS/3.UPDATER/SOFTWARE/SELF-SELECT/PatchMyPC.exe",
@@ -2007,8 +1974,7 @@ class ChocolateyGUI(QWidget):
     def install_packages(self):
         installed, failed = self.manager.install_packages()
 
-        self.terminal_display.append(
-            f'Successfully installed: {", ".join(installed)}')
+        self.terminal_display.append(f'Successfully installed: {", ".join(installed)}')
         self.terminal_display.append(f'Failed to install: {", ".join(failed)}')
 
         # Update progress bar
@@ -2098,8 +2064,7 @@ class ChocolateyManager:
 
     def run_chocolatey_gui(self):
         try:
-            subprocess.run(
-                ["choco", "install", "chocolateygui", "-y"], check=True)
+            subprocess.run(["choco", "install", "chocolateygui", "-y"], check=True)
             subprocess.run(["chocolateygui"], check=True)
         except subprocess.CalledProcessError as e:
             return f"Error occurred during installation or launch:\n{e}"
@@ -2137,8 +2102,7 @@ class WingetGUI(QWidget):
     def install_packages(self):
         installed, failed = self.manager.install_winget_packages()
 
-        self.terminal_display.append(
-            f'Successfully installed: {", ".join(installed)}')
+        self.terminal_display.append(f'Successfully installed: {", ".join(installed)}')
         self.terminal_display.append(f'Failed to install: {", ".join(failed)}')
 
         # Update progress bar
@@ -2153,6 +2117,7 @@ class WingetGUI(QWidget):
 
         if reply == QMessageBox.Yes:
             self.manager.run_winget_gui()
+
 
 class WingetManager:
     def __init__(self):
@@ -2264,8 +2229,7 @@ class WingetManager:
 
         open_store_button = QPushButton("Open Microsoft Store for Winget")
         open_store_button.clicked.connect(
-            lambda: QDesktopServices.openUrl(
-                QUrl("https://aka.ms/winget-install"))
+            lambda: QDesktopServices.openUrl(QUrl("https://aka.ms/winget-install"))
             or None
         )
 
@@ -2337,8 +2301,7 @@ class WingetManager:
         try:
             # Install the WingetUI Store
             subprocess.run(
-                ["winget", "install", "-e", "--id",
-                    "SomePythonThings.WingetUIStore"],
+                ["winget", "install", "-e", "--id", "SomePythonThings.WingetUIStore"],
                 check=True,
             )
             # Launch the WingetUI
@@ -2347,6 +2310,7 @@ class WingetManager:
             return f"Error occurred during installation or launch:\n{e.stderr}"
         except Exception as e:
             return f"Error occurred: {e}"
+
 
 class DiskCleanupThread(QThread):
     progress_signal = pyqtSignal(int)
@@ -2361,7 +2325,17 @@ class DiskCleanupThread(QThread):
         localappdata_path = os.environ.get("LOCALAPPDATA", "")
         appdata_path = os.environ.get("APPDATA", "")
 
-        file_formats = ["*.ra", "*.ram", "*.bak", "*.old", "*.chk", "*.gid", "*.log", "*._mp", "*.tmp"]
+        file_formats = [
+            "*.ra",
+            "*.ram",
+            "*.bak",
+            "*.old",
+            "*.chk",
+            "*.gid",
+            "*.log",
+            "*._mp",
+            "*.tmp",
+        ]
 
         # Base paths that need cleaning based on file formats
         base_paths = [
@@ -2382,26 +2356,72 @@ class DiskCleanupThread(QThread):
 
         paths_to_clean = [
             os.path.join(user_path, "Cookies", "*.*"),
-            os.path.join(user_path, "AppData", "Local", "Microsoft", "Windows", "Temporary Internet Files", "*.*"),
+            os.path.join(
+                user_path,
+                "AppData",
+                "Local",
+                "Microsoft",
+                "Windows",
+                "Temporary Internet Files",
+                "*.*",
+            ),
             os.path.join(windir_path, "temp", "*.*"),
             os.path.join(windir_path, "Prefetch", "*.*"),
             os.path.join("C:", "Program Files (x86)", "Google", "Temp", "*.*"),
-            os.path.join("C:", "Program Files (x86)", "Steam", "steamapps", "temp", "*.*"),
-            os.path.join("C:", "ProgramData", "Microsoft", "Windows", "WER", "Temp", "*.*"),
-            os.path.join("C:", "Users", "All Users", "Microsoft", "Windows", "WER", "Temp", "*.*"),
-            os.path.join(localappdata_path, "BraveSoftware", "Brave-Browser", "User Data", "Default", "Cache", "*.*"),
-            os.path.join(localappdata_path, "Google", "Chrome", "User Data", "Default", "Cache", "*.*"),
-            os.path.join(localappdata_path, "Mozilla", "Firefox", "Profiles", "*", "Cache", "*.*"),
-            os.path.join(localappdata_path, "Mozilla", "Firefox", "Profiles", "*", "Cache2", "*.*"),
+            os.path.join(
+                "C:", "Program Files (x86)", "Steam", "steamapps", "temp", "*.*"
+            ),
+            os.path.join(
+                "C:", "ProgramData", "Microsoft", "Windows", "WER", "Temp", "*.*"
+            ),
+            os.path.join(
+                "C:", "Users", "All Users", "Microsoft", "Windows", "WER", "Temp", "*.*"
+            ),
+            os.path.join(
+                localappdata_path,
+                "BraveSoftware",
+                "Brave-Browser",
+                "User Data",
+                "Default",
+                "Cache",
+                "*.*",
+            ),
+            os.path.join(
+                localappdata_path,
+                "Google",
+                "Chrome",
+                "User Data",
+                "Default",
+                "Cache",
+                "*.*",
+            ),
+            os.path.join(
+                localappdata_path, "Mozilla", "Firefox", "Profiles", "*", "Cache", "*.*"
+            ),
+            os.path.join(
+                localappdata_path,
+                "Mozilla",
+                "Firefox",
+                "Profiles",
+                "*",
+                "Cache2",
+                "*.*",
+            ),
             os.path.join(windir_path, "SoftwareDistribution", "Download", "*.*"),
             os.path.join(systemdrive_path, "System Volume Information", "*"),
             os.path.join(systemdrive_path, "$Recycle.Bin", "*.*"),
             os.path.join(user_path, "Recent", "*.*"),
-            os.path.join(user_path, "AppData", "Roaming", "Microsoft", "Windows", "Recent", "*.*"),
-            os.path.join(localappdata_path, "Microsoft", "Windows", "WER", "ReportQueue", "*.*"),
+            os.path.join(
+                user_path, "AppData", "Roaming", "Microsoft", "Windows", "Recent", "*.*"
+            ),
+            os.path.join(
+                localappdata_path, "Microsoft", "Windows", "WER", "ReportQueue", "*.*"
+            ),
             os.path.join(appdata_path, "Adobe", "Common", "Cache", "*.*"),
             os.path.join(localappdata_path, "Microsoft", "Windows", "1033", "*.*"),
-            os.path.join(localappdata_path, "Microsoft", "Windows", "Explorer", "thumbcache_*.db"),
+            os.path.join(
+                localappdata_path, "Microsoft", "Windows", "Explorer", "thumbcache_*.db"
+            ),
             os.path.join(appdata_path, "LocalLow", "Temp", "*.*"),
             os.path.join(windir_path, "Logs", "*.*")
             # ... Add other specific directories and paths
@@ -2418,7 +2438,9 @@ class DiskCleanupThread(QThread):
         """Attempt to delete a file or directory, and log if unsuccessful."""
         if "*" in path or "?" in path:  # Handle wildcard deletions
             for item in glob.glob(path):
-                self.safe_delete(item, file_formats)  # Passing file_formats in recursive call
+                self.safe_delete(
+                    item, file_formats
+                )  # Passing file_formats in recursive call
             return
 
         try:
@@ -2436,6 +2458,7 @@ class DiskCleanupThread(QThread):
             subprocess.run("cleanmgr.exe", check=True)
         except subprocess.CalledProcessError:
             logging.warning("Failed to launch Windows Disk Cleanup Utility.")
+
 
 class DiskCleanerApp(QWidget):
     def __init__(self):
@@ -2459,11 +2482,16 @@ class DiskCleanerApp(QWidget):
         self.layout.addWidget(self.button)
 
         self.setLayout(self.layout)
-        self.setWindowTitle('Disk Cleaner')
+        self.setWindowTitle("Disk Cleaner")
         self.show()
 
     def start_cleanup(self):
-        user_response = QMessageBox.question(self, "Confirmation", "Are you sure you want to start the disk cleanup process?", QMessageBox.Yes | QMessageBox.No)
+        user_response = QMessageBox.question(
+            self,
+            "Confirmation",
+            "Are you sure you want to start the disk cleanup process?",
+            QMessageBox.Yes | QMessageBox.No,
+        )
         if user_response == QMessageBox.Yes:
             self.button.setEnabled(False)
             self.thread.start()
@@ -2476,6 +2504,7 @@ class DiskCleanerApp(QWidget):
             self.button.setEnabled(True)
             QMessageBox.information(self, "Completed", "Disk Cleanup Completed!")
 
+
 class DiskCheckThread(QThread):
     output_signal = pyqtSignal(str)
 
@@ -2485,12 +2514,18 @@ class DiskCheckThread(QThread):
 
     def run(self):
         try:
-            result = subprocess.check_output(f"CHKDSK {self.drive_letter}: /R /I /F /X", shell=True, stderr=subprocess.STDOUT, text=True)
+            result = subprocess.check_output(
+                f"CHKDSK {self.drive_letter}: /R /I /F /X",
+                shell=True,
+                stderr=subprocess.STDOUT,
+                text=True,
+            )
             self.output_signal.emit(result)
         except subprocess.CalledProcessError as e:
             self.output_signal.emit(f"Error while running CHKDSK: {e.output}")
         except Exception as e:
             self.output_signal.emit(f"Unexpected error: {e}")
+
 
 class DiskCheckApp(QWidget):
     thread: Optional[DiskCheckThread]
@@ -2518,10 +2553,12 @@ class DiskCheckApp(QWidget):
         layout.addWidget(self.start_btn)
 
         self.setLayout(layout)
-        self.setWindowTitle('Disk Check Utility')
+        self.setWindowTitle("Disk Check Utility")
 
     def get_available_drives(self):
-        return [f"{d}:\\" for d in 'ABCDEFGHIJKLMNOPQRSTUVWXYZ' if os.path.exists(f"{d}:")]
+        return [
+            f"{d}:\\" for d in "ABCDEFGHIJKLMNOPQRSTUVWXYZ" if os.path.exists(f"{d}:")
+        ]
 
     def start_disk_check(self):
         drive_letter = self.drive_combo.currentText().replace(":\\", "")
@@ -2534,6 +2571,7 @@ class DiskCheckApp(QWidget):
     def update_terminal(self, text):
         self.output_terminal.append(text)
 
+
 class DISM_SFC_Thread(QThread):
     output_signal = pyqtSignal(str)
 
@@ -2542,13 +2580,16 @@ class DISM_SFC_Thread(QThread):
         self.cmd = cmd
 
     def run(self):
-        process = subprocess.Popen(self.cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
+        process = subprocess.Popen(
+            self.cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True
+        )
         out, err = process.communicate()
 
         # Emitting the output to update the UI
         self.output_signal.emit(out.decode("utf-8"))
         if err:
             self.output_signal.emit(err.decode("utf-8"))
+
 
 class SystemCheckApp(QWidget):
     def __init__(self):
@@ -2558,7 +2599,6 @@ class SystemCheckApp(QWidget):
 
     def init_ui(self):
         layout = QVBoxLayout()
-
 
         # Buttons
         self.dism_cleanup_btn = QPushButton("StartComponentCleanup / ResetBase", self)
@@ -2592,7 +2632,7 @@ class SystemCheckApp(QWidget):
 
         # Setting layout and other properties
         self.setLayout(layout)
-        self.setWindowTitle('DISM and SFC Tool')
+        self.setWindowTitle("DISM and SFC Tool")
         self.show()
 
     def execute_command(self, command):
@@ -2602,64 +2642,87 @@ class SystemCheckApp(QWidget):
             print(f"Error executing command: {e}")
 
     def on_dism_cleanup_clicked(self):
-        msg = ("This will initiate a cleanup of the Windows component store to reclaim space. "
-               "This procedure will also reset the base of superseded components. Do you want to continue?")
-        reply = QMessageBox.question(self, "Confirmation", msg, QMessageBox.Yes | QMessageBox.No)
+        msg = (
+            "This will initiate a cleanup of the Windows component store to reclaim space. "
+            "This procedure will also reset the base of superseded components. Do you want to continue?"
+        )
+        reply = QMessageBox.question(
+            self, "Confirmation", msg, QMessageBox.Yes | QMessageBox.No
+        )
         if reply == QMessageBox.Yes:
-            cmd = ("Dism.exe /online /Cleanup-Image /StartComponentCleanup /ResetBase")
+            cmd = "Dism.exe /online /Cleanup-Image /StartComponentCleanup /ResetBase"
             self.thread = DISM_SFC_Thread(cmd)
             self.thread.output_signal.connect(self.update_output)
             self.thread.start()
 
     def on_dism_superseded_clicked(self):
-        msg = ("This will remove any backup components needed for de-installation of public software updates. "
-               "Do you want to continue?")
-        reply = QMessageBox.question(self, "Confirmation", msg, QMessageBox.Yes | QMessageBox.No)
+        msg = (
+            "This will remove any backup components needed for de-installation of public software updates. "
+            "Do you want to continue?"
+        )
+        reply = QMessageBox.question(
+            self, "Confirmation", msg, QMessageBox.Yes | QMessageBox.No
+        )
         if reply == QMessageBox.Yes:
-            cmd = ("Dism.exe /online /Cleanup-Image /SPSuperseded")
+            cmd = "Dism.exe /online /Cleanup-Image /SPSuperseded"
             self.thread = DISM_SFC_Thread(cmd)
             self.thread.output_signal.connect(self.update_output)
             self.thread.start()
 
     def on_check_health_clicked(self):
-        msg = "This will check the health of your Windows image. Do you want to continue?"
-        reply = QMessageBox.question(self, "Confirmation", msg, QMessageBox.Yes | QMessageBox.No)
+        msg = (
+            "This will check the health of your Windows image. Do you want to continue?"
+        )
+        reply = QMessageBox.question(
+            self, "Confirmation", msg, QMessageBox.Yes | QMessageBox.No
+        )
         if reply == QMessageBox.Yes:
-            cmd = ("DISM /Online /Cleanup-Image /CheckHealth")
+            cmd = "DISM /Online /Cleanup-Image /CheckHealth"
             self.thread = DISM_SFC_Thread(cmd)
             self.thread.output_signal.connect(self.update_output)
             self.thread.start()
 
     def on_scan_health_clicked(self):
-        msg = "This will scan the health of your Windows image. Do you want to continue?"
-        reply = QMessageBox.question(self, "Confirmation", msg, QMessageBox.Yes | QMessageBox.No)
+        msg = (
+            "This will scan the health of your Windows image. Do you want to continue?"
+        )
+        reply = QMessageBox.question(
+            self, "Confirmation", msg, QMessageBox.Yes | QMessageBox.No
+        )
         if reply == QMessageBox.Yes:
-            cmd = ("DISM /Online /Cleanup-Image /ScanHealth")
+            cmd = "DISM /Online /Cleanup-Image /ScanHealth"
             self.thread = DISM_SFC_Thread(cmd)
             self.thread.output_signal.connect(self.update_output)
             self.thread.start()
 
     def on_restore_health_clicked(self):
         msg = "This will attempt to restore the health of your Windows image. Do you want to continue?"
-        reply = QMessageBox.question(self, "Confirmation", msg, QMessageBox.Yes | QMessageBox.No)
+        reply = QMessageBox.question(
+            self, "Confirmation", msg, QMessageBox.Yes | QMessageBox.No
+        )
         if reply == QMessageBox.Yes:
-            cmd = ("DISM /Online /Cleanup-Image /RestoreHealth")
+            cmd = "DISM /Online /Cleanup-Image /RestoreHealth"
             self.thread = DISM_SFC_Thread(cmd)
             self.thread.output_signal.connect(self.update_output)
             self.thread.start()
 
     def on_sfc_clicked(self):
-        msg = ("This will scan all protected system files, and replace corrupted files with a cached copy "
-               "that is located in a compressed folder at %WinDir%\\System32\\dllcache. Do you want to continue?")
-        reply = QMessageBox.question(self, "Confirmation", msg, QMessageBox.Yes | QMessageBox.No)
+        msg = (
+            "This will scan all protected system files, and replace corrupted files with a cached copy "
+            "that is located in a compressed folder at %WinDir%\\System32\\dllcache. Do you want to continue?"
+        )
+        reply = QMessageBox.question(
+            self, "Confirmation", msg, QMessageBox.Yes | QMessageBox.No
+        )
         if reply == QMessageBox.Yes:
-            cmd = ("sfc /scannow")
+            cmd = "sfc /scannow"
             self.thread = DISM_SFC_Thread(cmd)
             self.thread.output_signal.connect(self.update_output)
             self.thread.start()
 
     def update_output(self, text):
         self.output.appendPlainText(text)
+
 
 class GroupPolicyResetApp(QWidget):
     def __init__(self):
@@ -2672,12 +2735,12 @@ class GroupPolicyResetApp(QWidget):
         layout.addWidget(self.output)
 
         # Add a button to start the reset process
-        self.reset_button = QPushButton('Reset Group Policy', self)
+        self.reset_button = QPushButton("Reset Group Policy", self)
         self.reset_button.clicked.connect(self.on_reset_clicked)
         layout.addWidget(self.reset_button)
 
         self.setLayout(layout)
-        self.setWindowTitle('Group Policy Reset Tool')
+        self.setWindowTitle("Group Policy Reset Tool")
         self.show()
 
         self.output = QPlainTextEdit(self)
@@ -2685,45 +2748,81 @@ class GroupPolicyResetApp(QWidget):
 
     def on_reset_clicked(self):
         # Prompt user for confirmation
-        msg = ("The Group Policy Editor is an important tool for Windows OS using which "
-               "System Administrators can fine-tune system settings. It has several infrastructural "
-               "configuration options that allow you to make adjustments to the specific performance "
-               "and security settings for users and computers. Sometimes you might end up tweaking your "
-               "Group Policy Editor a bit further down the line where your computer starts behaving in "
-               "an unwanted way. This is when you know that its time to reset all Group Policy settings "
-               "to default and save yourself the pain of reinstalling Windows again. This section is "
-               "Pre-Setup so that you won't have to look through forums to find a solution. Please "
-               "reboot once the cleanup is complete. Do you understand and want to continue?")
+        msg = (
+            "The Group Policy Editor is an important tool for Windows OS using which "
+            "System Administrators can fine-tune system settings. It has several infrastructural "
+            "configuration options that allow you to make adjustments to the specific performance "
+            "and security settings for users and computers. Sometimes you might end up tweaking your "
+            "Group Policy Editor a bit further down the line where your computer starts behaving in "
+            "an unwanted way. This is when you know that its time to reset all Group Policy settings "
+            "to default and save yourself the pain of reinstalling Windows again. This section is "
+            "Pre-Setup so that you won't have to look through forums to find a solution. Please "
+            "reboot once the cleanup is complete. Do you understand and want to continue?"
+        )
 
-        reply = QMessageBox.question(self, 'GROUP POLICY RESET AGREEMENT', msg,
-                                     QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
+        reply = QMessageBox.question(
+            self,
+            "GROUP POLICY RESET AGREEMENT",
+            msg,
+            QMessageBox.Yes | QMessageBox.No,
+            QMessageBox.No,
+        )
         if reply == QMessageBox.Yes:
             self.run_reset_script()
+
     def run_reset_script(self):
         try:
             # Reset Group Policies
-            self.delete_reg_key(winreg.HKEY_CURRENT_USER, r"Software\Microsoft\Windows\CurrentVersion\Policies")
-            self.delete_reg_key(winreg.HKEY_CURRENT_USER, r"Software\Microsoft\WindowsSelfHost")
+            self.delete_reg_key(
+                winreg.HKEY_CURRENT_USER,
+                r"Software\Microsoft\Windows\CurrentVersion\Policies",
+            )
+            self.delete_reg_key(
+                winreg.HKEY_CURRENT_USER, r"Software\Microsoft\WindowsSelfHost"
+            )
             self.delete_reg_key(winreg.HKEY_CURRENT_USER, r"Software\Policies")
-            self.delete_reg_key(winreg.HKEY_LOCAL_MACHINE, r"Software\Microsoft\Policies")
-            self.delete_reg_key(winreg.HKEY_LOCAL_MACHINE, r"Software\Microsoft\Windows\CurrentVersion\Policies")
-            self.delete_reg_key(winreg.HKEY_LOCAL_MACHINE, r"Software\Microsoft\Windows\CurrentVersion\WindowsStore\WindowsUpdate")
-            self.delete_reg_key(winreg.HKEY_LOCAL_MACHINE, r"Software\Microsoft\WindowsSelfHost")
+            self.delete_reg_key(
+                winreg.HKEY_LOCAL_MACHINE, r"Software\Microsoft\Policies"
+            )
+            self.delete_reg_key(
+                winreg.HKEY_LOCAL_MACHINE,
+                r"Software\Microsoft\Windows\CurrentVersion\Policies",
+            )
+            self.delete_reg_key(
+                winreg.HKEY_LOCAL_MACHINE,
+                r"Software\Microsoft\Windows\CurrentVersion\WindowsStore\WindowsUpdate",
+            )
+            self.delete_reg_key(
+                winreg.HKEY_LOCAL_MACHINE, r"Software\Microsoft\WindowsSelfHost"
+            )
             self.delete_reg_key(winreg.HKEY_LOCAL_MACHINE, r"Software\Policies")
-            self.delete_reg_key(winreg.HKEY_LOCAL_MACHINE, r"Software\WOW6432Node\Microsoft\Policies")
-            self.delete_reg_key(winreg.HKEY_LOCAL_MACHINE, r"Software\WOW6432Node\Microsoft\Windows\CurrentVersion\Policies")
-            self.delete_reg_key(winreg.HKEY_LOCAL_MACHINE, r"Software\WOW6432Node\Microsoft\Windows\CurrentVersion\WindowsStore\WindowsUpdate")
+            self.delete_reg_key(
+                winreg.HKEY_LOCAL_MACHINE, r"Software\WOW6432Node\Microsoft\Policies"
+            )
+            self.delete_reg_key(
+                winreg.HKEY_LOCAL_MACHINE,
+                r"Software\WOW6432Node\Microsoft\Windows\CurrentVersion\Policies",
+            )
+            self.delete_reg_key(
+                winreg.HKEY_LOCAL_MACHINE,
+                r"Software\WOW6432Node\Microsoft\Windows\CurrentVersion\WindowsStore\WindowsUpdate",
+            )
 
             # Run gpupdate
-            result = subprocess.run(['gpupdate', '/force'], capture_output=True, text=True)
+            result = subprocess.run(
+                ["gpupdate", "/force"], capture_output=True, text=True
+            )
             if result.returncode != 0:
                 raise Exception(f"gpupdate /force failed with error: {result.stderr}")
 
-            QMessageBox.information(self, 'Reset Complete', 'Group Policy has been successfully reset. Please reboot your computer.')
+            QMessageBox.information(
+                self,
+                "Reset Complete",
+                "Group Policy has been successfully reset. Please reboot your computer.",
+            )
 
         except Exception as e:
-            QMessageBox.critical(self, 'Error', f"An error occurred: {str(e)}")
-
+            QMessageBox.critical(self, "Error", f"An error occurred: {str(e)}")
 
     def delete_reg_key(self, hive, subkey):
         try:
@@ -2733,10 +2832,13 @@ class GroupPolicyResetApp(QWidget):
             # Key does not exist, which is fine
             pass
         except Exception as e:
-            QMessageBox.critical(self, 'Error', f"Failed to delete registry key: {str(e)}")
+            QMessageBox.critical(
+                self, "Error", f"Failed to delete registry key: {str(e)}"
+            )
 
     def update_output(self, text):
         self.output.appendPlainText(text)
+
 
 class WMIResetApp(QWidget):
     def __init__(self):
@@ -2751,79 +2853,122 @@ class WMIResetApp(QWidget):
 
         layout.addWidget(self.confirm_button)
         self.setLayout(layout)
-        self.setWindowTitle('Windows Management Instrumentation Reset Tool')
+        self.setWindowTitle("Windows Management Instrumentation Reset Tool")
         self.show()
 
     def confirm_reset(self):
-        message = ("Full WMI reset to the state when the operating system was installed is a serious measurement...[your full message]")
-        reply = QMessageBox.warning(self, 'WMI Reset Agreement', message, QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
+        message = "Full WMI reset to the state when the operating system was installed is a serious measurement...[your full message]"
+        reply = QMessageBox.warning(
+            self,
+            "WMI Reset Agreement",
+            message,
+            QMessageBox.Yes | QMessageBox.No,
+            QMessageBox.No,
+        )
         if reply == QMessageBox.Yes:
             self.perform_reset()
 
     def perform_reset(self):
         # Here's the logic for the newer method
-        result = subprocess.run(['winmgmt', '/salvagerepository'], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+        result = subprocess.run(
+            ["winmgmt", "/salvagerepository"],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+        )
 
         if "failed" in result.stderr.lower():
-            result = subprocess.run(['winmgmt', '/recoverrepository'], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+            result = subprocess.run(
+                ["winmgmt", "/recoverrepository"],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True,
+            )
             if "failed" in result.stderr.lower():
                 self.perform_old_reset()
-        QMessageBox.information(self, 'Reset Complete', 'WMI Repository has been successfully reset.')
+        QMessageBox.information(
+            self, "Reset Complete", "WMI Repository has been successfully reset."
+        )
 
     def perform_old_reset(self):
         # Logic for the older reset method
         commands = [
-            ['sc', 'config', 'winmgmt', 'start= disabled'],
-            ['net', 'stop', 'winmgmt', '/y'],
-            ['regsvr32', '/s', '%systemroot%\\system32\\scecli.dll'],
-            ['regsvr32', '/s', '%systemroot%\\system32\\userenv.dll'],
+            ["sc", "config", "winmgmt", "start= disabled"],
+            ["net", "stop", "winmgmt", "/y"],
+            ["regsvr32", "/s", "%systemroot%\\system32\\scecli.dll"],
+            ["regsvr32", "/s", "%systemroot%\\system32\\userenv.dll"],
             # Navigate to WBEM folder
-            ['cd', '/d', '%systemroot%\\system32\\wbem'],
+            ["cd", "/d", "%systemroot%\\system32\\wbem"],
             # Remove 'repository' folder
-            ['rd', '/S', '/Q', 'repository'],
+            ["rd", "/S", "/Q", "repository"],
             # Register Service DLLs
         ]
 
         for command in commands:
-            subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+            subprocess.run(
+                command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True
+            )
 
         # Register all DLLs in the directory
-        result = subprocess.run(['dir', '/b', '/s', '*.dll'], capture_output=True, text=True, shell=True)
-        all_dlls = result.stdout.split('\n')
+        result = subprocess.run(
+            ["dir", "/b", "/s", "*.dll"], capture_output=True, text=True, shell=True
+        )
+        all_dlls = result.stdout.split("\n")
         for dll in all_dlls:
             if dll:  # To ensure the string isn't empty
-                subprocess.run(['regsvr32', '/s', dll], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+                subprocess.run(
+                    ["regsvr32", "/s", dll],
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE,
+                    text=True,
+                )
 
         # Re-registering .mof and .mfl files
-        mof_result = subprocess.run(['dir', '/b', '*.mof'], capture_output=True, text=True, shell=True)
-        all_mofs = mof_result.stdout.split('\n')
+        mof_result = subprocess.run(
+            ["dir", "/b", "*.mof"], capture_output=True, text=True, shell=True
+        )
+        all_mofs = mof_result.stdout.split("\n")
         for mof in all_mofs:
             if mof:
-                subprocess.run(['mofcomp', mof], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+                subprocess.run(
+                    ["mofcomp", mof],
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE,
+                    text=True,
+                )
 
-        mfl_result = subprocess.run(['dir', '/b', '*.mfl'], capture_output=True, text=True, shell=True)
-        all_mfls = mfl_result.stdout.split('\n')
+        mfl_result = subprocess.run(
+            ["dir", "/b", "*.mfl"], capture_output=True, text=True, shell=True
+        )
+        all_mfls = mfl_result.stdout.split("\n")
         for mfl in all_mfls:
             if mfl:
-                subprocess.run(['mofcomp', mfl], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+                subprocess.run(
+                    ["mofcomp", mfl],
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE,
+                    text=True,
+                )
 
         # Continue with the reset process
         commands_contd = [
-            ['wmiprvse', '/regserver'],
-            ['winmgmt', '/regserver'],
+            ["wmiprvse", "/regserver"],
+            ["winmgmt", "/regserver"],
             # Navigate to WBEM folder in SysWOW64
-            ['cd', '/d', '%systemroot%\\SysWOW64\\wbem'],
+            ["cd", "/d", "%systemroot%\\SysWOW64\\wbem"],
             # Remove 'repository' folder
-            ['rd', '/S', '/Q', 'repository'],
+            ["rd", "/S", "/Q", "repository"],
             # Turn winmgmt service Startup type to Automatic
-            ['sc', 'config', 'winmgmt', 'start= auto'],
+            ["sc", "config", "winmgmt", "start= auto"],
             # Start winmgmt service
-            ['net', 'start', 'winmgmt'],
-            ['winmgmt', '/resetrepository']
+            ["net", "start", "winmgmt"],
+            ["winmgmt", "/resetrepository"],
         ]
 
         for command in commands_contd:
-            subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+            subprocess.run(
+                command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True
+            )
 
 
 class CustomUI(QMainWindow):
@@ -2887,8 +3032,7 @@ class CustomUI(QMainWindow):
         # Initialize the fade animation for submenus
         self.opacity_effect = QGraphicsOpacityEffect(self.submenus)
         self.submenus.setGraphicsEffect(self.opacity_effect)
-        self.fade_animation = QPropertyAnimation(
-            self.opacity_effect, b"opacity")
+        self.fade_animation = QPropertyAnimation(self.opacity_effect, b"opacity")
         self.fade_animation.setDuration(300)
         self.fade_animation.setStartValue(0)
         self.fade_animation.setEndValue(1)
@@ -2902,31 +3046,41 @@ class CustomUI(QMainWindow):
         updated_info = consolidate_info(get_system_information())
         self.system_info_text_display.setPlainText(updated_info)
 
-    def setup_shutdown_menu(self, menu):
+    def setup_shutdown_menu(self, menu, cmd=None):
         shutdown_options = {
             1: ("Restart (Default Setting)", "shutdown /r /t 1"),
             2: ("Restart Reregister Applications", "shutdown /g /t 1"),
             3: ("Restart PC to UEFI/BIOS menu", "shutdown /r /fw /t 1"),
-            4: ("Restart PC and load the advanced boot options menu", "shutdown /r /o /t 1"),
+            4: (
+                "Restart PC and load the advanced boot options menu",
+                "shutdown /r /o /t 1",
+            ),
             5: ("Shutdown PC (Default Setting)", "shutdown /s /t 1"),
-            6: ("Shutdown PC and Re-register any applications on next boot", "shutdown /sg /t 1"),
-            7: ("Sign Out User", "shutdown /l")
+            6: (
+                "Shutdown PC and Re-register any applications on next boot",
+                "shutdown /sg /t 1",
+            ),
+            7: ("Sign Out User", "shutdown /l"),
         }
 
         for key, (text, cmd) in shutdown_options.items():
             action = QAction(f"[{key}] {text}", self)
-            action.triggered.connect(lambda checked, cmd=cmd: self.execute_shutdown_option(cmd))
+            action.triggered.connect(
+                lambda checked, cmd=cmd: self.execute_shutdown_option(cmd)
+            )
             menu.addAction(action)
 
     def execute_shutdown_option(self, cmd):
         if cmd:
-            res = QMessageBox.question(self, 'Confirmation',
-                                       f"Are you sure you want to execute the command?",
-                                       QMessageBox.Yes | QMessageBox.No)
+            res = QMessageBox.question(
+                self,
+                "Confirmation",
+                f"Are you sure you want to execute the command?",
+                QMessageBox.Yes | QMessageBox.No,
+            )
 
             if res == QMessageBox.Yes:
                 subprocess.run(cmd, shell=True)
-
 
     def construct_menu(self, menu_dict):
         for main, subitems in menu_dict.items():
@@ -2934,13 +3088,11 @@ class CustomUI(QMainWindow):
                 submenu = QWidget()
                 layout = QVBoxLayout(submenu)
 
-                consolidated_info_text = consolidate_info(
-                    get_system_information())
+                consolidated_info_text = consolidate_info(get_system_information())
                 self.system_info_text_display = QTextEdit(
                     self
                 )  # Change to instance variable
-                self.system_info_text_display.setPlainText(
-                    consolidated_info_text)
+                self.system_info_text_display.setPlainText(consolidated_info_text)
                 self.system_info_text_display.setReadOnly(
                     True
                 )  # Make the widget read-only
@@ -2961,21 +3113,17 @@ class CustomUI(QMainWindow):
                         elif item == "List Adapters":
                             btn.clicked.connect(self.display_adapters)
                         elif item == "Auto Config Network":
-                            btn.clicked.connect(
-                                self.on_auto_configure_button_clicked)
+                            btn.clicked.connect(self.on_auto_configure_button_clicked)
                         elif item == "Manual Config Network":
-                            btn.clicked.connect(
-                                self.on_manual_configure_button_clicked)
+                            btn.clicked.connect(self.on_manual_configure_button_clicked)
                         elif item == "Ping Hosts":
                             btn.clicked.connect(self.open_ping_dialog)
                         elif item == "Trace Route":
                             btn.clicked.connect(self.traceroute)
                         elif item == "Network Share Manager":
-                            btn.clicked.connect(
-                                self.open_network_share_manager)
+                            btn.clicked.connect(self.open_network_share_manager)
                         elif item == "Wi-Fi Password Extract":
-                            btn.clicked.connect(
-                                self.open_wifi_password_extract)
+                            btn.clicked.connect(self.open_wifi_password_extract)
                         elif item == "Enable/Disable Windows Defender":
                             btn.clicked.connect(self.open_defender_dialog)
                         elif (
@@ -3036,8 +3184,7 @@ class CustomUI(QMainWindow):
 
                         self.submenus.addWidget(submenu)
 
-                    submenu_list.currentRowChanged.connect(
-                        self.display_subsubmenu)
+                    submenu_list.currentRowChanged.connect(self.display_subsubmenu)
 
     def show_detail(self, key, value):
         # This function will be called when an item from "System Information" is clicked
@@ -3166,8 +3313,7 @@ class CustomUI(QMainWindow):
             ).decode()
 
             # Extract adapter names from the output
-            adapters = re.findall(
-                r"Configuration for interface \"(.+?)\"", output)
+            adapters = re.findall(r"Configuration for interface \"(.+?)\"", output)
 
             return adapters
 
@@ -3217,8 +3363,7 @@ class CustomUI(QMainWindow):
         """
         Extract IP address from netsh command output.
         """
-        match = re.search(
-            r"IP Address:\s+(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})", output)
+        match = re.search(r"IP Address:\s+(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})", output)
         if match:
             return match.group(1)
         return "Not Found"
@@ -3227,17 +3372,13 @@ class CustomUI(QMainWindow):
         """Fetch current network configurations for the given adapter."""
         try:
             output = subprocess.check_output(
-                ["netsh", "interface", "ipv4", "show",
-                    "config", f"name={adapter_name}"]
+                ["netsh", "interface", "ipv4", "show", "config", f"name={adapter_name}"]
             ).decode()
 
             # Use regex to extract configurations
-            ip_address = re.search(
-                r"IP Address:\s+(\d+\.\d+\.\d+\.\d+)", output)
-            subnet_mask = re.search(
-                r"Subnet Prefix:\s+(\d+\.\d+\.\d+\.\d+)", output)
-            gateway = re.search(
-                r"Default Gateway:\s+(\d+\.\d+\.\d+\.\d+)", output)
+            ip_address = re.search(r"IP Address:\s+(\d+\.\d+\.\d+\.\d+)", output)
+            subnet_mask = re.search(r"Subnet Prefix:\s+(\d+\.\d+\.\d+\.\d+)", output)
+            gateway = re.search(r"Default Gateway:\s+(\d+\.\d+\.\d+\.\d+)", output)
             dns_primary = re.search(
                 r"Statically Configured DNS Servers:\s+(\d+\.\d+\.\d+\.\d+)", output
             )
@@ -3528,12 +3669,12 @@ class CustomUI(QMainWindow):
 
         try:
             with subprocess.Popen(
-                    ["python", script_path],
-                    stdout=subprocess.PIPE,
-                    text=True,
-                    bufsize=1,
-                    universal_newlines=True,
-                ) as proc:
+                ["python", script_path],
+                stdout=subprocess.PIPE,
+                text=True,
+                bufsize=1,
+                universal_newlines=True,
+            ) as proc:
                 if proc.stdout:  # Check if stdout is not None
                     for line in proc.stdout:
                         self.print_to_terminal(line.strip())
@@ -3570,12 +3711,12 @@ class CustomUI(QMainWindow):
 
         try:
             with subprocess.Popen(
-                    ["python", script_path],
-                    stdout=subprocess.PIPE,
-                    text=True,
-                    bufsize=1,
-                    universal_newlines=True,
-                ) as proc:
+                ["python", script_path],
+                stdout=subprocess.PIPE,
+                text=True,
+                bufsize=1,
+                universal_newlines=True,
+            ) as proc:
                 if proc.stdout:  # Check if stdout is not None
                     for line in proc.stdout:
                         self.print_to_terminal(line.strip())
@@ -3596,8 +3737,8 @@ class CustomUI(QMainWindow):
             self.install_dependencies()
 
             # Create a marker file to indicate the installation is done
-            with open(marker_file, 'w') as f:
-                f.write('PyQt6 installation completed.')
+            with open(marker_file, "w") as f:
+                f.write("PyQt6 installation completed.")
 
         # Launch the PyQt6 script
         self.install_dependencies()
@@ -3613,9 +3754,13 @@ class CustomUI(QMainWindow):
             for package in packages:
                 subprocess.check_call(["pip", "install", "--upgrade", package])
 
-            QMessageBox.information(self, "Success", "Dependencies installed/updated successfully!")
+            QMessageBox.information(
+                self, "Success", "Dependencies installed/updated successfully!"
+            )
         except Exception as e:
-            QMessageBox.warning(self, "Error", f"Failed to install/update dependencies. Error: {e}")
+            QMessageBox.warning(
+                self, "Error", f"Failed to install/update dependencies. Error: {e}"
+            )
 
     def run_windows_install(self):
         self.print_to_terminal("Starting Windows Installation Process...")
@@ -3632,7 +3777,7 @@ class CustomUI(QMainWindow):
             "https://raw.githubusercontent.com/coff33ninja/NexTool-Windows-Suite/main/Modules/Windows-Install/disk_manager.py": "disk_manager.py",
             "https://raw.githubusercontent.com/coff33ninja/NexTool-Windows-Suite/main/Modules/Windows-Install/media_manager.py": "media_manager.py",
             "https://raw.githubusercontent.com/coff33ninja/NexTool-Windows-Suite/main/Modules/Windows-Install/utils.py": "utils.py",
-            "https://raw.githubusercontent.com/coff33ninja/NexTool-Windows-Suite/main/Modules/Windows-Install/wim_manager.py": "wim_manager.py"
+            "https://raw.githubusercontent.com/coff33ninja/NexTool-Windows-Suite/main/Modules/Windows-Install/wim_manager.py": "wim_manager.py",
         }
 
         for file_url, filename in file_urls.items():
@@ -3668,6 +3813,7 @@ class CustomUI(QMainWindow):
     def launch_disk_cleanup(self):
         self.DiskCleanerApp = DiskCleanerApp()
         self.DiskCleanerApp.show()
+
     def show_defrag_info(self):
         message = (
             "Defragmentation is an advanced system operation that involves rearranging the way information "
@@ -3679,8 +3825,13 @@ class CustomUI(QMainWindow):
             "\n\nWould you like to open the Windows defragmentation tool?"
         )
 
-        reply = QMessageBox.question(self, "Defragmentation Information", message,
-                                     QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
+        reply = QMessageBox.question(
+            self,
+            "Defragmentation Information",
+            message,
+            QMessageBox.Yes | QMessageBox.No,
+            QMessageBox.No,
+        )
 
         if reply == QMessageBox.Yes:
             try:
@@ -3747,7 +3898,6 @@ class CustomUI(QMainWindow):
         self.print_to_terminal("Backup/Restore Process completed")
 
 
-
 tabs = {
     "System Information": [],
     "Network": [
@@ -3776,7 +3926,13 @@ tabs = {
         "Snappy Driver",
         "Office Installations",
     ],
-    "Maintenance": ["Disk Cleanup", "Disk Defragment", "Disk Check", "DISM and SFC Windows Repair", "Backup or Restore"],
+    "Maintenance": [
+        "Disk Cleanup",
+        "Disk Defragment",
+        "Disk Check",
+        "DISM and SFC Windows Repair",
+        "Backup or Restore",
+    ],
     "Experiments": [
         "Windows Install",
         "Windows Debloater",
@@ -3785,7 +3941,6 @@ tabs = {
         "Advanced Hardware Info",
     ],
     "Extras": [],
-
 }
 
 if __name__ == "__main__":

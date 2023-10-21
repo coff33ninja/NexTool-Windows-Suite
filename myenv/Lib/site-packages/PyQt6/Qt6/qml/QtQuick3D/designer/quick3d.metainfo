@@ -11,12 +11,13 @@ MetaInfo {
         }
 
         ItemLibraryEntry {
-            name: "Camera Perspective"
-            category: "Camera"
+            name: "Perspective Camera"
+            category: "Cameras"
             libraryIcon: "images/camera.png"
             version: "6.0"
             requiredImport: "QtQuick3D"
             Property { name: "z"; type: "int"; value: 500; }
+            toolTip: qsTr("A camera that uses perspective projection.")
         }
     }
     Type {
@@ -31,12 +32,13 @@ MetaInfo {
         }
 
         ItemLibraryEntry {
-            name: "Camera Orthographic"
-            category: "Camera"
+            name: "Orthographic Camera"
+            category: "Cameras"
             libraryIcon: "images/camera.png"
             version: "6.0"
             requiredImport: "QtQuick3D"
             Property { name: "z"; type: "int"; value: 500; }
+            toolTip: qsTr("A parallel projection Camera, in which an object's perceived scale is unaffected by its distance from the Camera.")
         }
     }
     Type {
@@ -51,12 +53,13 @@ MetaInfo {
         }
 
         ItemLibraryEntry {
-            name: "Camera Frustum"
-            category: "Camera"
+            name: "Frustum Camera"
+            category: "Cameras"
             libraryIcon: "images/camera.png"
             version: "6.0"
             requiredImport: "QtQuick3D"
             Property { name: "z"; type: "int"; value: 500; }
+            toolTip: qsTr("A perspective camera with a custom frustum.")
         }
     }
     Type {
@@ -71,12 +74,13 @@ MetaInfo {
         }
 
         ItemLibraryEntry {
-            name: "Camera Custom"
-            category: "Camera"
+            name: "Custom Camera"
+            category: "Cameras"
             libraryIcon: "images/camera.png"
             version: "6.0"
             requiredImport: "QtQuick3D"
             Property { name: "z"; type: "int"; value: 500; }
+            toolTip: qsTr("A camera with a custom projection matrix.")
         }
     }
     Type {
@@ -97,6 +101,7 @@ MetaInfo {
             requiredImport: "QtQuick3D"
             Property { name: "fragmentShader"; type: "QUrl"; value: "custom_material_default_shader.frag"; }
             ExtraFile { source: "source/custom_material_default_shader.frag" }
+            toolTip: qsTr("A material with customizable vertex and fragment shaders.")
         }
     }
     Type {
@@ -116,6 +121,7 @@ MetaInfo {
             version: "6.0"
             requiredImport: "QtQuick3D"
             Property { name: "diffuseColor"; type: "color"; value: "#4aee45"; }
+            toolTip: qsTr("A material with a specular/glossiness properties.")
         }
     }
     Type {
@@ -135,6 +141,7 @@ MetaInfo {
             version: "6.0"
             requiredImport: "QtQuick3D"
             Property { name: "baseColor"; type: "color"; value: "#4aee45"; }
+            toolTip: qsTr("A material with a PBR metal/roughness properties.")
         }
     }
     Type {
@@ -155,6 +162,7 @@ MetaInfo {
             requiredImport: "QtQuick3D"
             Property { name: "albedoColor"; type: "color"; value: "#4aee45"; }
             Property { name: "specularColor"; type: "color"; value: "#000000"; }
+            toolTip: qsTr("A material with a PBR specular/glossiness properties.")
         }
     }
     Type {
@@ -170,10 +178,11 @@ MetaInfo {
 
         ItemLibraryEntry {
             name: "Texture"
-            category: "Materials"
+            category: "Textures"
             libraryIcon: "images/texture.png"
             version: "6.0"
             requiredImport: "QtQuick3D"
+            toolTip: qsTr("Defines a texture for 3D objects.")
         }
     }
     Type {
@@ -189,10 +198,11 @@ MetaInfo {
 
         ItemLibraryEntry {
             name: "Cube Map Texture"
-            category: "Materials"
+            category: "Textures"
             libraryIcon: "images/cubemaptexture.png"
             version: "6.4"
             requiredImport: "QtQuick3D"
+            toolTip: qsTr("Defines a cube map texture for 3D objects.")
         }
     }
     Type {
@@ -207,11 +217,12 @@ MetaInfo {
         }
 
         ItemLibraryEntry {
-            name: "Light Directional"
+            name: "Directional Light"
             category: "Lights"
             libraryIcon: "images/lightdirectional.png"
             version: "6.0"
             requiredImport: "QtQuick3D"
+            toolTip: qsTr("A light similar to sunlight. It emits light in one direction from an infinitely far away source.")
         }
     }
     Type {
@@ -226,11 +237,12 @@ MetaInfo {
         }
 
         ItemLibraryEntry {
-            name: "Light Point"
+            name: "Point Light"
             category: "Lights"
             libraryIcon: "images/lightpoint.png"
             version: "6.0"
             requiredImport: "QtQuick3D"
+            toolTip: qsTr("A light similar to a light bulb. It emits light equally in all directions from a central source.")
         }
     }
     Type {
@@ -245,11 +257,12 @@ MetaInfo {
         }
 
         ItemLibraryEntry {
-            name: "Light Spot"
+            name: "Spotlight"
             category: "Lights"
             libraryIcon: "images/lightspot.png"
             version: "6.0"
             requiredImport: "QtQuick3D"
+            toolTip: qsTr("A spotlight emits light in one direction in a cone shape.")
         }
     }
     Type {
@@ -265,11 +278,12 @@ MetaInfo {
         }
 
         ItemLibraryEntry {
-            name: "Empty"
-            category: "Models"
+            name: "Model"
+            category: "Components"
             libraryIcon: "images/group.png"
             version: "6.0"
             requiredImport: "QtQuick3D"
+            toolTip: qsTr("Allows you to load 3D mesh data.")
         }
     }
     Type {
@@ -286,11 +300,12 @@ MetaInfo {
 
         ItemLibraryEntry {
             name: "Cube"
-            category: "Models"
+            category: "Primitives"
             libraryIcon: "images/cube.png"
             version: "6.0"
             requiredImport: "QtQuick3D"
             Property { name: "source"; type: "QUrl"; value: "#Cube"; }
+            toolTip: qsTr("A cube model.")
         }
     }
     Type {
@@ -307,11 +322,12 @@ MetaInfo {
 
         ItemLibraryEntry {
             name: "Sphere"
-            category: "Models"
+            category: "Primitives"
             libraryIcon: "images/sphere.png"
             version: "6.0"
             requiredImport: "QtQuick3D"
             Property { name: "source"; type: "QUrl"; value: "#Sphere"; }
+            toolTip: qsTr("A sphere model.")
         }
     }
     Type {
@@ -328,11 +344,12 @@ MetaInfo {
 
         ItemLibraryEntry {
             name: "Cylinder"
-            category: "Models"
+            category: "Primitives"
             libraryIcon: "images/cylinder.png"
             version: "6.0"
             requiredImport: "QtQuick3D"
             Property { name: "source"; type: "QUrl"; value: "#Cylinder"; }
+            toolTip: qsTr("A cylinder model.")
         }
     }
     Type {
@@ -349,11 +366,12 @@ MetaInfo {
 
         ItemLibraryEntry {
             name: "Plane"
-            category: "Models"
+            category: "Primitives"
             libraryIcon: "images/plane.png"
             version: "6.0"
             requiredImport: "QtQuick3D"
             Property { name: "source"; type: "QUrl"; value: "#Rectangle"; }
+            toolTip: qsTr("A plane model.")
         }
     }
     Type {
@@ -370,11 +388,12 @@ MetaInfo {
 
         ItemLibraryEntry {
             name: "Cone"
-            category: "Models"
+            category: "Primitives"
             libraryIcon: "images/cone.png"
             version: "6.0"
             requiredImport: "QtQuick3D"
             Property { name: "source"; type: "QUrl"; value: "#Cone"; }
+            toolTip: qsTr("A cone model.")
         }
     }
     Type {
@@ -394,6 +413,7 @@ MetaInfo {
             libraryIcon: "images/group.png"
             version: "6.0"
             requiredImport: "QtQuick3D"
+            toolTip: qsTr("A container to keep several QtQuick3D components or scenes together.")
         }
     }
     Type {
@@ -412,6 +432,7 @@ MetaInfo {
             libraryIcon: "images/scene.png"
             version: "6.0"
             requiredImport: "QtQuick3D"
+            toolTip: qsTr("Configures the render settings for a scene.")
         }
     }
     Type {
@@ -420,11 +441,12 @@ MetaInfo {
 
         ItemLibraryEntry {
             name: "View3D"
-            category: "Components"
+            category: "Items"
             libraryIcon: "images/view3D.png"
             version: "6.0"
             requiredImport: "QtQuick3D"
             QmlSource { source: "./source/view3D_template.qml" }
+            toolTip: qsTr("A 2D surface where a 3D scene can be rendered.")
         }
     }
     Type {
@@ -439,10 +461,11 @@ MetaInfo {
 
         ItemLibraryEntry {
             name: "Shader"
-            category: "Qt Quick 3D Custom Shader Utils"
+            category: "Custom Shader Utils"
             libraryIcon: "images/shaderutil.png"
             version: "6.0"
             requiredImport: "QtQuick3D"
+            toolTip: qsTr("A container for keeping the vertex or fragment shader codes to be used by post-processing effect.")
         }
     }
     Type {
@@ -457,10 +480,11 @@ MetaInfo {
 
         ItemLibraryEntry {
             name: "Texture Input"
-            category: "Qt Quick 3D Custom Shader Utils"
+            category: "Custom Shader Utils"
             libraryIcon: "images/shaderutil.png"
             version: "6.0"
             requiredImport: "QtQuick3D"
+            toolTip: qsTr("Specifies a texture that gets exposed to the shader.")
         }
     }
     Type {
@@ -475,10 +499,11 @@ MetaInfo {
 
         ItemLibraryEntry {
             name: "Pass"
-            category: "Qt Quick 3D Custom Shader Utils"
+            category: "Custom Shader Utils"
             libraryIcon: "images/shaderutil.png"
             version: "6.0"
             requiredImport: "QtQuick3D"
+            toolTip: qsTr("Holds a set of actions combining a list of executable render commands, an output buffer, and a list of shaders to use for rendering effects.")
         }
     }
     Type {
@@ -493,10 +518,11 @@ MetaInfo {
 
         ItemLibraryEntry {
             name: "Buffer Input"
-            category: "Qt Quick 3D Custom Shader Utils"
+            category: "Custom Shader Utils"
             libraryIcon: "images/shadercommand.png"
             version: "6.0"
             requiredImport: "QtQuick3D"
+            toolTip: qsTr("A command that gets added to the list of commands in the Pass of an Effect when executed.")
         }
     }
     Type {
@@ -511,10 +537,11 @@ MetaInfo {
 
         ItemLibraryEntry {
             name: "Buffer"
-            category: "Qt Quick 3D Custom Shader Utils"
+            category: "Custom Shader Utils"
             libraryIcon: "images/shaderutil.png"
             version: "6.0"
             requiredImport: "QtQuick3D"
+            toolTip: qsTr("Creates or references a color buffer to be used for a pass of an Effect.")
         }
     }
     Type {
@@ -529,10 +556,11 @@ MetaInfo {
 
         ItemLibraryEntry {
             name: "Set Uniform Value"
-            category: "Qt Quick 3D Custom Shader Utils"
+            category: "Custom Shader Utils"
             libraryIcon: "images/shadercommand.png"
             version: "6.0"
             requiredImport: "QtQuick3D"
+            toolTip: qsTr("A value that would be set when a single pass actions takes place.")
         }
     }
     Type {
@@ -547,12 +575,13 @@ MetaInfo {
 
         ItemLibraryEntry {
             name: "Effect"
-            category: "Qt Quick 3D"
+            category: "Components"
             libraryIcon: "images/effect.png"
             version: "6.0"
             requiredImport: "QtQuick3D"
             QmlSource { source: "./source/effect_template.qml" }
             ExtraFile { source: "./source/effect_default_shader.frag" }
+            toolTip: qsTr("A method to allow the user to implement their post-processing effects on entire View3D.")
         }
     }
     Type {
@@ -567,11 +596,12 @@ MetaInfo {
         }
 
         ItemLibraryEntry {
-            name: "Repeater3D"
+            name: "3D Repeater"
             category: "Components"
             libraryIcon: "images/repeater3d.png"
             version: "6.0"
             requiredImport: "QtQuick3D"
+            toolTip: qsTr("Dynamically creates several copies of the same 3D object.")
         }
     }
     Type {
@@ -591,6 +621,7 @@ MetaInfo {
             libraryIcon: "images/loader3d.png"
             version: "6.0"
             requiredImport: "QtQuick3D"
+            toolTip: qsTr("Allows you to load 3D components dynamically.")
         }
     }
     Type {
@@ -605,10 +636,11 @@ MetaInfo {
 
         ItemLibraryEntry {
             name: "Skeleton"
-            category: "Qt Quick 3D"
+            category: "Components"
             libraryIcon: "images/skeleton.png"
             version: "6.0"
             requiredImport: "QtQuick3D"
+            toolTip: qsTr("Defines a skeletal animation hierarchy.")
         }
     }
     Type {
@@ -623,10 +655,11 @@ MetaInfo {
 
         ItemLibraryEntry {
             name: "Morph Target"
-            category: "Qt Quick 3D"
+            category: "Components"
             libraryIcon: "images/morphtarget.png"
             version: "6.0"
             requiredImport: "QtQuick3D"
+            toolTip: qsTr("Defines the properties of a morph target.")
         }
     }
     Type {
@@ -641,10 +674,11 @@ MetaInfo {
 
         ItemLibraryEntry {
             name: "Instance List Entry"
-            category: "Qt Quick 3D"
+            category: "Components"
             libraryIcon: "images/instancelistentry.png"
             version: "6.2"
             requiredImport: "QtQuick3D"
+            toolTip: qsTr("One instance in an Instance List. The instance includes a set of property specifications.")
         }
     }
     Type {
@@ -659,10 +693,11 @@ MetaInfo {
 
         ItemLibraryEntry {
             name: "Instance List"
-            category: "Qt Quick 3D"
+            category: "Components"
             libraryIcon: "images/instancelist.png"
             version: "6.2"
             requiredImport: "QtQuick3D"
+            toolTip: qsTr("Enables 3D model instancing, a lightweight 3D object replication method.")
         }
     }
     Type {
@@ -677,10 +712,11 @@ MetaInfo {
 
         ItemLibraryEntry {
             name: "File Instancing"
-            category: "Qt Quick 3D"
+            category: "Components"
             libraryIcon: "images/fileinstancing.png"
             version: "6.2"
             requiredImport: "QtQuick3D"
+            toolTip: qsTr("A method that allows reading instance tables from XML or Qt-specific binary files.")
         }
     }
     Type {
@@ -695,10 +731,11 @@ MetaInfo {
 
         ItemLibraryEntry {
             name: "Joint"
-            category: "Qt Quick 3D"
+            category: "Components"
             libraryIcon: "images/joint.png"
             version: "6.0"
             requiredImport: "QtQuick3D"
+            toolTip: qsTr("A transformable node that connects different parts in a skeletal animation.")
         }
     }
     Type {
@@ -714,10 +751,111 @@ MetaInfo {
 
         ItemLibraryEntry {
             name: "Reflection Probe"
-            category: "Qt Quick 3D"
+            category: "Components"
             libraryIcon: "images/reflectionProbe.png"
             version: "6.3"
             requiredImport: "QtQuick3D"
+            toolTip: qsTr("Reflects the current scene to the objects.")
+        }
+    }
+    Type {
+        name: "QtQuick3D.Fog"
+        icon: "images/fog16.png"
+
+        Hints {
+            visibleInNavigator: true
+            canBeDroppedInNavigator: true
+            canBeDroppedInFormEditor: false
+            canBeDroppedInView3D: false
+        }
+
+        ItemLibraryEntry {
+            name: "Fog"
+            category: "Components"
+            libraryIcon: "images/fog.png"
+            version: "6.5"
+            requiredImport: "QtQuick3D"
+        }
+    }
+    Type {
+        name: "QtQuick3D.DebugSettings"
+        icon: "images/debugsettings16.png"
+
+        Hints {
+            visibleInNavigator: true
+            canBeDroppedInNavigator: true
+            canBeDroppedInFormEditor: false
+            canBeDroppedInView3D: false
+        }
+
+        ItemLibraryEntry {
+            name: "Debug Settings"
+            category: "Components"
+            libraryIcon: "images/debugsettings.png"
+            version: "6.5"
+            requiredImport: "QtQuick3D"
+        }
+    }
+
+    Type {
+        name: "QtQuick3D.Lightmapper"
+        icon: "images/lightmapper16.png"
+
+        Hints {
+            visibleInNavigator: true
+            canBeDroppedInNavigator: true
+            canBeDroppedInFormEditor: false
+            canBeDroppedInView3D: false
+        }
+
+        ItemLibraryEntry {
+            // Split the name to avoid ellipsis in UI
+            name: "Light Mapper"
+            category: "Components"
+            libraryIcon: "images/lightmapper.png"
+            version: "6.5"
+            requiredImport: "QtQuick3D"
+        }
+    }
+
+    Type {
+        name: "QtQuick3D.Skin"
+        icon: "images/skin16.png"
+
+        Hints {
+            visibleInNavigator: true
+            canBeDroppedInNavigator: true
+            canBeDroppedInFormEditor: false
+            canBeDroppedInView3D: false
+        }
+
+        ItemLibraryEntry {
+            name: "Skin"
+            category: "Components"
+            libraryIcon: "images/skin.png"
+            version: "6.5"
+            requiredImport: "QtQuick3D"
+        }
+    }
+
+    Type {
+        name: "QtQuick3D.ResourceLoader"
+        icon: "images/resourceLoader16.png"
+
+        Hints {
+            visibleInNavigator: true
+            canBeDroppedInNavigator: true
+            canBeDroppedInFormEditor: false
+            canBeDroppedInView3D: false
+        }
+
+        ItemLibraryEntry {
+            name: "Resource Loader"
+            category: "Components"
+            libraryIcon: "images/resourceLoader.png"
+            version: "6.2"
+            requiredImport: "QtQuick3D"
+            toolTip: qsTr("Pre-load resources for 3D scene. It makes sure that large resources are available before rendering a frame.")
         }
     }
 }

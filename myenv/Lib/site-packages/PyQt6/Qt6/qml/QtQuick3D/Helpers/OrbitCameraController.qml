@@ -31,6 +31,10 @@ Item {
             if (distance < 1) {
                 camera.clipNear = 0.01
                 camera.clipFar = 100
+                if (camera.z === 0) {
+                    console.warn("camera z set to 0, setting it to near clip")
+                    camera.z = camera.clipNear
+                    }
             } else if (distance < 100) {
                 camera.clipNear = 0.1
                 camera.clipFar = 1000
@@ -108,6 +112,7 @@ Item {
         orientation: Qt.Vertical
         target: null
         enabled: mouseEnabled
+        acceptedDevices: PointerDevice.Mouse | PointerDevice.TouchPad
         onWheel: event => {
             let delta = -event.angleDelta.y * 0.01;
             camera.z += camera.z * 0.1 * delta
