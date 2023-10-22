@@ -9,6 +9,7 @@ NexTool Windows Suite offers an all-in-one solution for Windows users, ranging f
 ### 🖥️ System Information
 
 Gain detailed insights about your machine's specs and performance:
+
 - CPU Specifications
 - Memory Statistics
 - BIOS Version
@@ -18,6 +19,7 @@ Gain detailed insights about your machine's specs and performance:
 ### 🔧 Windows Configuration
 
 Personalize and control various facets of Windows:
+
 - Basic Computer Report: Overview of system details.
 - Advanced Hardware Info: Deep dive into hardware and system resources.
 - Defender Management: Fine-tune Windows Defender settings.
@@ -30,12 +32,14 @@ Personalize and control various facets of Windows:
 ### 🚀 Services Manager
 
 Achieve optimal performance by managing Windows services:
+
 - DISM and SFC Windows Repair: Mend corrupted Windows files.
 - Windows Debloater: Eliminate bloatware.
 - Group Policy Reset: Restore group policies to defaults.
 - WMI Reset: Reinitialize the Windows Management Instrumentation service.
 
 ### Additional Features
+
 - 🌐 Network Optimizer: Fine-tune your network settings.
 - 💽 Disk Cleaner: Maintain and optimize storage drives.
 - 🚫 Firewall Manager: Enhance your firewall settings.
@@ -54,50 +58,54 @@ Achieve optimal performance by managing Windows services:
 1. There are multiple ways to execute the setup script:
 
    a. **Directly from the Web**:
-   
-      Execute the following command in an elevated PowerShell window:
 
-      Method 1 - Using net.webclient for downloading and executing
-      ```powershell
-      iex (new-object net.webclient).DownloadString('https://raw.githubusercontent.com/coff33ninja/NexTool-Windows-Suite/master/AdminLaunchOption.ps1')
-      ```
-      
-      Method 2 - Using Invoke-WebRequest with its alias iwr 
-      ```powershell
-      iwr -useb https://raw.githubusercontent.com/coff33ninja/NexTool-Windows-Suite/master/AdminLaunchOption.ps1 | iex
-      ```
-      
-      Method 3 - Using Invoke-RestMethod with its alias irm 
-      ```powershell
-      irm https://raw.githubusercontent.com/coff33ninja/NexTool-Windows-Suite/master/AdminLaunchOption.ps1 | iex
-      ```
+   Execute the following command in an elevated PowerShell window:
+
+   Method 1 - Using net.webclient for downloading and executing
+
+   ```powershell
+   iex (new-object net.webclient).DownloadString('https://raw.githubusercontent.com/coff33ninja/NexTool-Windows-Suite/master/AdminLaunchOption.ps1')
+   ```
+
+   Method 2 - Using Invoke-WebRequest with its alias iwr
+
+   ```powershell
+   iwr -useb https://raw.githubusercontent.com/coff33ninja/NexTool-Windows-Suite/master/AdminLaunchOption.ps1 | iex
+   ```
+
+   Method 3 - Using Invoke-RestMethod with its alias irm
+
+   ```powershell
+   irm https://raw.githubusercontent.com/coff33ninja/NexTool-Windows-Suite/master/AdminLaunchOption.ps1 | iex
+   ```
 
    b. **Local Execution**:
-   
-      - Download the provided PowerShell script (`NexTool-Setup.ps1`).
-      - Right-click on the downloaded file and choose "Run with PowerShell".
 
-3. The script will automatically handle the setup:
+   - Download the provided PowerShell script (`NexTool-Setup.ps1`).
+   - Right-click on the downloaded file and choose "Run with PowerShell".
+
+2. The script will automatically handle the setup:
+
    - It checks and installs Chocolatey if not present.
-   - Installs or updates essential tools like `aria2`, `wget`, `curl`, and `powershell-core`.
+   - Installs or updates essential tools like `aria2` and `powershell-core`.
    - Ensures Python is installed and sets up required Python packages.
    - Downloads and sets up Winget if not present.
    - Downloads the NexTool Python script and prepares it for execution.
 
-4. After the script execution completes, it will launch the `NexTool.py` Python script.
+3. After the script execution completes, it will launch the `NexTool.py` Python script.
 
-**Note**: The script creates temporary directories (`C:\NexTool` & `C:\PS`) during its operation, which will be cleared out once the setup is complete.
+**Note**: The script creates a temporary directory (`C:\NexTool`) during its operation, which will be cleared out once the setup is complete.
 
 For users who prefer an executable, a `PS2EXE` version of the script is available in the [Releases](https://github.com/coff33ninja/NexTool-Windows-Suite/releases) section of our GitHub repository.
 
 For issues during installation, refer to the "Feedback & Issues" section and report any problems you encounter.
 
-
 ## TODO & Progress
 
 Here's our roadmap for NexTool's development and the milestones achieved:
 
-### Completed:
+### Completed
+
 - [x] Windows Configuration Section: Integrated tools for managing and modifying Windows settings.
 - [x] GUI Development: Building an intuitive and user-friendly interface using Python.
 - [x] Office Installations Manager: Implemented streamlined processes for managing Microsoft Office applications.
@@ -106,23 +114,21 @@ Here's our roadmap for NexTool's development and the milestones achieved:
 - [x] Network Optimizer: Analyze current network settings, also offer tweaks to optimize online connectivity and reduce latency.
 - [x] Network Optimizer: Tools for analyzing and enhancing network settings.
 - [x] Winget and Choco Integration: Provide a guided mode for beginners and a selective mode for advanced users to choose their preferred applications for installation or updates.
+- [x] Device Configuration: Adding functionalities for device settings customization.
+- [x] Windows Debloating Tool: Tools to remove unnecessary pre-installed applications.
+- [x] Telemetry and Data Collection Settings: Allow users to control the extent of data Windows collects.
+- [x] Add a "Services Manager" section: Introduce tools to:
+      Disable unnecessary services to improve system performance.
+      Customize startup services to ensure a faster boot time.
+      Manage service dependencies for a stable system operation.
+- [x] Windows Installation for Advanced Users: Offer features to facilitate custom Windows installations.
+- [x] Disk Cleaner: Scan for junk files, temporary files, and cache. Provide options to clean and reclaim storage space.
 
-### In Progress / Planned:
-- [ ] Services Manager Section: Introduced tools for managing services for improved performance.
+### In Progress / Planned
 
-- [ ] Device Configuration: Adding functionalities for device settings customization.
-- [ ] Windows Debloating Tool: Tools to remove unnecessary pre-installed applications.
-
-- [ ] Telemetry and Data Collection Settings: Allow users to control the extent of data Windows collects.
-- [ ] Add a "Services Manager" section: Introduce tools to:
-         Disable unnecessary services to improve system performance.
-         Customize startup services to ensure a faster boot time.
-         Manage service dependencies for a stable system operation.
-- [ ] Windows Installation for Advanced Users: Offer features to facilitate custom Windows installations.
-- [ ] Disk Cleaner:  Scan for junk files, temporary files, and cache. Provide options to clean and reclaim storage space.
+- [ ] Bug check and cleanup of all script functions and Git Repo. (Well once I find better methods...)
 - [ ] Firewall Manager: Customize firewall rules. Monitor incoming and outgoing connections for improved security.
 - [ ] Security Audit Tool: Scan the system for potential vulnerabilities. Provide recommendations and fixes for identified security loopholes.
-
 
 And possibly more...: Continue to seek user feedback, identify common pain points, and integrate more tools and functionalities to make the NexTool Windows Suite the go-to toolbox for every Windows user.
 
@@ -138,7 +144,7 @@ Stay informed about what's next for NexTool! Check out our GitHub Milestones and
 
 Passionate about NexTool? We welcome contributions. For guidelines, please review our `CONTRIBUTING.md`.
 
-# Closing Remarks
+## Closing Remarks
 
 The NexTool Windows Suite aims to be the comprehensive toolbox for Windows users, building on the foundational work done in [AIO](https://github.com/coff33ninja/AIO). The previous version of the application was archived, as there were aspects that felt too routine and monotonous, including the layout and the version numbering approach.
 
