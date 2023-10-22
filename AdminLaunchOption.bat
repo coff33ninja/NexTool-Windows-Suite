@@ -103,20 +103,17 @@ if exist "!python_path!" (
     goto DownloadPython
 )
 
-
-:: Refactored Download Function
-:DownloadFile
-:: Parameters: %1=URL, %2=Destination
+:DownloadPython
 setlocal
 echo %date% %time% - Attempting download using aria2... >> %LOGFILE%
-aria2c -o "%~2" "%~1"
+aria2c --disable-ipv6 -x 4 -o "python-3.11.6-amd64.exe" -d "C:\NexTool" --allow-overwrite=true "https://www.python.org/ftp/python/3.11.6/python-3.11.6-amd64.exe"
 if "%errorlevel%"=="0" (
     echo %date% %time% - Downloaded successfully with aria2 >> %LOGFILE%
     endlocal && set "DOWNLOAD_RESULT=0"
     goto :eof
 ) else (
     echo %date% %time% - Failed to download with aria2. Trying PowerShell... >> %LOGFILE%
-    pwsh -Command "Invoke-WebRequest -Uri '%~1' -OutFile '%~2'"
+    pwsh -Command "Invoke-WebRequest -Uri 'https://www.python.org/ftp/python/3.11.6/python-3.11.6-amd64.exe' -OutFile 'C:\NexTool\python-3.11.6-amd64.exe'"
     if "%errorlevel%"=="0" (
         echo %date% %time% - Downloaded successfully with PowerShell >> %LOGFILE%
         endlocal && set "DOWNLOAD_RESULT=0"
@@ -127,22 +124,9 @@ if "%errorlevel%"=="0" (
     goto :eof
 )
 
-:DownloadPython
-:: Direct link to Python 3.11.6 installer
-set PYTHON_INSTALLER_PATH=python-3.11.6-amd64.exe
-set PYTHON_INSTALLER_URL=https://www.python.org/ftp/python/3.11.6/python-3.11.6-amd64.exe
-
-:: For Python installer
-call :DownloadFile %PYTHON_INSTALLER_URL% %PYTHON_INSTALLER_PATH%
-if "%DOWNLOAD_RESULT%"=="1" (
-    echo All above methods failed. Proceeding to manual method >> %LOGFILE%
-    goto PythonDownloadCheck
-)
-pause
-
-:: Install Python
+:InstallPython
 echo %date% %time% - Installing Python 3.11.6... >> %LOGFILE%
-%PYTHON_INSTALLER_PATH% /quiet InstallAllUsers=1 PrependPath=1 TargetDir=C:\Python
+C:\NexTool\python-3.11.6-amd64.exe /quiet InstallAllUsers=1 PrependPath=1 TargetDir=C:\Python311
 if "%errorlevel%"=="0" (
     echo %date% %time% - Python 3.11.6 installed successfully >> %LOGFILE%
     goto CheckforPython3.11
@@ -153,19 +137,33 @@ if "%errorlevel%"=="0" (
 
 
 :PythonDownloadCheck
-if not exist "!PYTHON_INSTALLER_PATH!" (
-    echo %date% %time% - Python installer was not downloaded. Prompting user for manual installation... >> %LOGFILE%
+set PYTHON_INSTALLER_PATH=C:\NexTool\python-3.11.6-amd64.exe
+set PYTHON_INSTALLER_URL=https://www.python.org/ftp/python/3.11.6/python-3.11.6-amd64.exe
+
+if not exist "%PYTHON_INSTALLER_PATH%" (
+    echo %date% %time% - Python installer was not downloaded. Prompting user for options... >> %LOGFILE%
     echo The Python 3.11.6 installer was not downloaded successfully.
-    echo Please download and install it manually from:
-    echo %PYTHON_INSTALLER_URL%
-    echo Make sure to install it to C:\Python and select all default options.
+    echo 1. Open the download link in your default browser
+    echo 2. Attempt to automatically install Python again
+    echo 3. Exit script
+    set /p user_choice="Please select an option (1/2/3): "
+    if /i "%user_choice%"=="1" (
+        start "" "%PYTHON_INSTALLER_URL%"
+    ) else if /i "%user_choice%"=="2" (
+        goto DownloadPython
+    ) else (
+        echo Exiting script...
+        exit /B
+    )
+    echo Please download and install Python manually if the auto-install option failed.
+    echo Make sure to install it to C:\Python311 and select all the options changing Python directory to C:\Python311 for the script to work.
     echo If you have installed it already, you can continue with the next steps.
     pause
     goto CheckforPython3.11
 ) else (
     :: Creating a shortcut to the installer on the Desktop if the download succeeded
     echo %date% %time% - Creating a shortcut to the Python installer on the Desktop... >> %LOGFILE%
-    @powershell -NoProfile -ExecutionPolicy Bypass -Command "$WScriptShell = New-Object -ComObject WScript.Shell; $Shortcut = $WScriptShell.CreateShortcut('$env:USERPROFILE\Desktop\Python 3.11.6 Installer.lnk'); $Shortcut.TargetPath = '!PYTHON_INSTALLER_PATH!'; $Shortcut.Save()"
+    @powershell -NoProfile -ExecutionPolicy Bypass -Command "$WScriptShell = New-Object -ComObject WScript.Shell; $Shortcut = $WScriptShell.CreateShortcut('$env:USERPROFILE\Desktop\Python 3.11.6 Installer.lnk'); $Shortcut.TargetPath = '%PYTHON_INSTALLER_PATH%'; $Shortcut.Save()"
     echo %date% %time% - Shortcut created. >> %LOGFILE%
     echo A shortcut to the Python installer has been placed on your desktop.
     echo Please run it and select all default options for installation.
@@ -193,18 +191,34 @@ if exist "!python_path!" (
 
 :Beginactualscriptcommands
 
-echo Installing/upgrading pip... >> %LOGFILE%
-"!python_path!" -m pip install --upgrade pip
-if errorlevel 1 (
-    set get-pip=https://bootstrap.pypa.io/get-pip.py
-    echo Error: Failed to upgrade pip. Attempting to reinstall pip... >> %LOGFILE%
-    set get-pip-path=%~dp0\get-pip.py
-    aria2c -o "!get-pip-path!" %get-pip%
-    "!python_path!" "!get-pip-path!"
+echo Upgrading pip... >> %LOGFILE%
+
+:: Try to download get-pip.py with aria2 first
+echo %date% %time% - Attempting to download get-pip.py using aria2... >> %LOGFILE%
+aria2c --disable-ipv6 -x 4 -o "get-pip.py" -d "C:\NexTool" --allow-overwrite=true "https://bootstrap.pypa.io/get-pip.py"
+if "%errorlevel%"=="0" (
+    echo %date% %time% - Downloaded get-pip.py successfully with aria2 >> %LOGFILE%
+) else (
+    echo %date% %time% - Failed to download get-pip.py with aria2. Trying PowerShell... >> %LOGFILE%
+    pwsh -Command "Invoke-WebRequest -Uri 'https://bootstrap.pypa.io/get-pip.py' -OutFile 'C:\NexTool\get-pip.py'"
     if errorlevel 1 (
-        echo Error: Failed to install/upgrade pip >> %LOGFILE%
+        echo %date% %time% - Failed to download get-pip.py with both methods >> %LOGFILE%
+        echo Error: Failed to download get-pip.py. Aborting... >> %LOGFILE%
         exit /b
+    ) else (
+        echo %date% %time% - Downloaded get-pip.py successfully with PowerShell >> %LOGFILE%
     )
+)
+
+:: Upgrade pip using get-pip.py
+echo %date% %time% - Upgrading pip... >> %LOGFILE%
+"!python_path!" "C:\NexTool\get-pip.py"
+if errorlevel 1 (
+    echo %date% %time% - Error: Failed to upgrade pip >> %LOGFILE%
+    echo Error: Failed to upgrade pip. Aborting... >> %LOGFILE%
+    exit /b
+) else (
+    echo %date% %time% - Successfully upgraded pip >> %LOGFILE%
 )
 
 echo Installing/upgrading setuptools for Python 3.11... >> %LOGFILE%
@@ -263,10 +277,38 @@ if errorlevel 1 (
 ) else (
     echo Success: pywin32 installed/upgraded successfully >> %LOGFILE%
 )
+cls
 
+:DownloadNexTool
+setlocal
+echo %date% %time% - Attempting download using aria2... >> %LOGFILE%
+aria2c --disable-ipv6 -x 4 -o "NexTool.py" -d "C:\NexTool" --allow-overwrite=true "https://raw.githubusercontent.com/coff33ninja/NexTool-Windows-Suite/main/NexTool.py"
+if "%errorlevel%"=="0" (
+    echo %date% %time% - Downloaded successfully with aria2 >> %LOGFILE%
+    endlocal && set "DOWNLOAD_RESULT=0"
+    goto :LaunchNexTool
+) else (
+    echo %date% %time% - Failed to download with aria2. Trying PowerShell... >> %LOGFILE%
+    pwsh -Command "Invoke-WebRequest -Uri 'https://raw.githubusercontent.com/coff33ninja/NexTool-Windows-Suite/main/NexTool.py' -OutFile 'C:\NexTool\NexTool.py'"
+    if "%errorlevel%"=="0" (
+        echo %date% %time% - Downloaded successfully with PowerShell >> %LOGFILE%
+        endlocal && set "DOWNLOAD_RESULT=0"
+    ) else (
+        echo %date% %time% - Download failed with both methods >> %LOGFILE%
+        endlocal && set "DOWNLOAD_RESULT=1"
+    )
+    goto :LaunchNexTool
+)
 
+:LaunchNexTool
+:: Run the chosen Python version for your script
+if exist "C:/NexTool/NexTool.py" (
+    echo Launching NexTool.py
+    start /wait "" "!python_path!" "C:/NexTool/NexTool.py"
+) else (
+    echo Failed to download NexTool.py
+)
 
-:LoggPreview
 echo. >> %LOGFILE%
 echo Installation Summary: >> %LOGFILE%
 echo --------------------- >> %LOGFILE%
@@ -282,29 +324,20 @@ pause
 
 set /p user_input="Do you want to review the log? (yes/no): "
 if /i "%user_input%"=="yes" (
-    start notepad %LOGFILE%
+    start /wait notepad %LOGFILE%
 )
 
-cls && goto :Links
-
-:Links
-:: For NexTool.py
-set NexToolDestination=NexTool.py
-set NexToolURL=https://raw.githubusercontent.com/coff33ninja/NexTool-Windows-Suite/main/NexTool.py
-
-call :DownloadFile %NexToolURL% %NexToolDestination%
-if "%DOWNLOAD_RESULT%"=="1" (
-    :: Handle error here for NexTool.py
-    goto :Launch
+echo Deleting contents of C:\NexTool...
+for /R "C:\NexTool" %%i in (*) do (
+    del "%%i"
 )
-:Launch
-:: Run the chosen Python version for your script
-if exist "%NexToolDestination%" (
-    echo Launching NexTool.py
-    start "" "!python_path!" "%NexToolDestination%"
-) else (
-    echo Failed to download NexTool.py
+for /D %%i in (C:\NexTool\*) do (
+    rmdir /s /q "%%i"
 )
 
-pause
+echo Removing C:\NexTool directory...
+rmdir "C:\NexTool"
+
+echo Cleanup complete. Exiting script...
 endlocal
+exit /B
