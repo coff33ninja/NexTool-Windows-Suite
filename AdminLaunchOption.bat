@@ -106,14 +106,14 @@ if exist "!python_path!" (
 :DownloadPython
 setlocal
 echo %date% %time% - Attempting download using aria2... >> %LOGFILE%
-aria2c --disable-ipv6 -x 4 -o "python-3.11.6-amd64.exe" -d "C:\NexTool" --allow-overwrite=true "https://www.python.org/ftp/python/3.11.6/python-3.11.6-amd64.exe"
+aria2c.exe --disable-ipv6 -x 4 -o "python-3.11.6-amd64.exe" -d "C:\NexTool" --allow-overwrite=true "https://www.python.org/ftp/python/3.11.6/python-3.11.6-amd64.exe"
 if "%errorlevel%"=="0" (
     echo %date% %time% - Downloaded successfully with aria2 >> %LOGFILE%
     endlocal && set "DOWNLOAD_RESULT=0"
     goto :eof
 ) else (
     echo %date% %time% - Failed to download with aria2. Trying PowerShell... >> %LOGFILE%
-    pwsh -Command "Invoke-WebRequest -Uri 'https://www.python.org/ftp/python/3.11.6/python-3.11.6-amd64.exe' -OutFile 'C:\NexTool\python-3.11.6-amd64.exe'"
+    powershell.exe pwsh -Command "Invoke-WebRequest -Uri 'https://www.python.org/ftp/python/3.11.6/python-3.11.6-amd64.exe' -OutFile 'C:\NexTool\python-3.11.6-amd64.exe'"
     if "%errorlevel%"=="0" (
         echo %date% %time% - Downloaded successfully with PowerShell >> %LOGFILE%
         endlocal && set "DOWNLOAD_RESULT=0"
@@ -195,12 +195,12 @@ echo Upgrading pip... >> %LOGFILE%
 
 :: Try to download get-pip.py with aria2 first
 echo %date% %time% - Attempting to download get-pip.py using aria2... >> %LOGFILE%
-aria2c --disable-ipv6 -x 4 -o "get-pip.py" -d "C:\NexTool" --allow-overwrite=true "https://bootstrap.pypa.io/get-pip.py"
+aria2c.exe --disable-ipv6 -x 4 -o "get-pip.py" -d "C:\NexTool" --allow-overwrite=true "https://bootstrap.pypa.io/get-pip.py"
 if "%errorlevel%"=="0" (
     echo %date% %time% - Downloaded get-pip.py successfully with aria2 >> %LOGFILE%
 ) else (
     echo %date% %time% - Failed to download get-pip.py with aria2. Trying PowerShell... >> %LOGFILE%
-    pwsh -Command "Invoke-WebRequest -Uri 'https://bootstrap.pypa.io/get-pip.py' -OutFile 'C:\NexTool\get-pip.py'"
+    powershell.exe pwsh -Command "Invoke-WebRequest -Uri 'https://bootstrap.pypa.io/get-pip.py' -OutFile 'C:\NexTool\get-pip.py'"
     if errorlevel 1 (
         echo %date% %time% - Failed to download get-pip.py with both methods >> %LOGFILE%
         echo Error: Failed to download get-pip.py. Aborting... >> %LOGFILE%
