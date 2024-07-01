@@ -38,7 +38,7 @@ Function Install-Chocolatey {
     RefreshEnv
 }
 
-Function Download-File {
+Function DownloadFile {
     Param ([string]$url, [string]$destination)
     $downloadSuccess = $false
 
