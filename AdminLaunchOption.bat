@@ -340,17 +340,26 @@ if /i "%user_input%"=="yes" (
     start /wait notepad %LOGFILE%
 )
 
+:: Cleanup Logic
 echo Deleting contents of C:\NexTool...
-for /R "C:\NexTool" %%i in (*) do (
-    del "%%i"
-)
-for /D %%i in (C:\NexTool\*) do (
-    rmdir /s /q "%%i"
+if exist "C:\NexTool" (
+    for /R "C:\NexTool" %%i in (*) do (
+        del "%%i"
+    )
+    for /D %%i in (C:\NexTool\*) do (
+        rmdir /s /q "%%i"
+    )
+    echo Cleanup complete.
+) else (
+    echo C:\NexTool does not exist. No cleanup necessary.
 )
 
 echo Removing C:\NexTool directory...
-rmdir "C:\NexTool"
-
-echo Cleanup complete. Exiting script...
+if exist "C:\NexTool" (
+    rmdir "C:\NexTool"
+    echo C:\NexTool directory removed.
+) else (
+    echo C:\NexTool directory does not exist.
+)
 endlocal
 exit /B
