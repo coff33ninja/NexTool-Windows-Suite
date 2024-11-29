@@ -60,9 +60,31 @@ if errorlevel 1 (
     FOR /F "tokens=*" %%i in ('choco --version') do set CHOCO_VERSION=%%i
     echo Chocolatey version: %CHOCO_VERSION% already installed >> %LOGFILE%
 )
+:: Check Windows version
+for /f "tokens=4-5 delims=. " %%a in ('ver') do (
+    set major=%%a
+    set minor=%%b
+)
 
-:: Note: From here, we follow a pattern for checking/installing each tool.
+if !major! LSS 10 (
+    echo Winget is only available for Windows 10 and later. Continuing on with script. >> %LOGFILE%
+    pause
+    goto CheckAria2c
+)
 
+:CheckWinget
+echo %date% %time% - Checking Winget installation >> %LOGFILE%
+winget --version > nul 2>&1
+if errorlevel 1 (
+    echo Winget not detected. Attempting installation... >> %LOGFILE%
+    echo Installing Winget... >> %LOGFILE%
+    choco install winget -y -n
+) ELSE (
+    echo Winget is already installed. Checking for updates... >> %LOGFILE%
+    choco upgrade winget -y
+)
+
+:: Check and Install aria2c
 :CheckAria2c
 echo %date% %time% - Checking aria2c installation >> %LOGFILE%
 FOR /F "tokens=3" %%i in ('aria2c --version ^| findstr "aria2 version"') do set ARIA2C_VERSION=%%i
@@ -72,8 +94,8 @@ IF NOT DEFINED ARIA2C_VERSION (
 ) ELSE (
     echo aria2c version: %ARIA2C_VERSION% already installed >> %LOGFILE%
 )
-goto CheckPowershellCore
 
+:: Check and Install PowerShell Core
 :CheckPowershellCore
 echo %date% %time% - Checking PowerShell Core installation >> %LOGFILE%
 FOR /F "delims=" %%i in ('pwsh --version 2^>^&1') do set POWERSHELLCORE_VERSION=%%i
@@ -84,19 +106,15 @@ IF NOT DEFINED POWERSHELLCORE_VERSION (
     echo PowerShell Core version: %POWERSHELLCORE_VERSION% already installed >> %LOGFILE%
     choco upgrade powershell-core -y -n
 )
+
 cls && goto CheckforPython3.11
 
 :CheckforPython3.11
 echo Checking for Python in PATH... >> %LOGFILE%
-echo Checking for Python in PATH...
 set python_path=C:\Python311\python.exe
 if exist "!python_path!" (
     echo Found !python_path! >> %LOGFILE%
-    echo Found !python_path!
     "!python_path!" --version >> %LOGFILE%
-    "!python_path!" --version
-    echo. >> %LOGFILE%
-    echo.
     goto Beginactualscriptcommands
 ) else (
     echo Python 3.11.6 not found at expected location. >> %LOGFILE%
@@ -110,18 +128,19 @@ aria2c.exe --disable-ipv6 -x 4 -o "python-3.11.6-amd64.exe" -d "C:\NexTool" --al
 if "%errorlevel%"=="0" (
     echo %date% %time% - Downloaded successfully with aria2 >> %LOGFILE%
     endlocal && set "DOWNLOAD_RESULT=0"
-    goto :eof
+    goto InstallPython
 ) else (
     echo %date% %time% - Failed to download with aria2. Trying PowerShell... >> %LOGFILE%
     powershell.exe pwsh -Command "Invoke-WebRequest -Uri 'https://www.python.org/ftp/python/3.11.6/python-3.11.6-amd64.exe' -OutFile 'C:\NexTool\python-3.11.6-amd64.exe'"
     if "%errorlevel%"=="0" (
         echo %date% %time% - Downloaded successfully with PowerShell >> %LOGFILE%
         endlocal && set "DOWNLOAD_RESULT=0"
+        goto InstallPython
     ) else (
         echo %date% %time% - Download failed with both methods >> %LOGFILE%
         endlocal && set "DOWNLOAD_RESULT=1"
+        goto PythonDownloadCheck
     )
-    goto :eof
 )
 
 :InstallPython
@@ -132,9 +151,8 @@ if "%errorlevel%"=="0" (
     goto CheckforPython3.11
 ) else (
     echo %date% %time% - Failed to install Python 3.11.6. Aborting... >> %LOGFILE%
-    goto :PythonDownloadCheck
+    goto PythonDownloadCheck
 )
-
 
 :PythonDownloadCheck
 set PYTHON_INSTALLER_PATH=C:\NexTool\python-3.11.6-amd64.exe
@@ -157,11 +175,9 @@ if not exist "%PYTHON_INSTALLER_PATH%" (
     )
     echo Please download and install Python manually if the auto-install option failed.
     echo Make sure to install it to C:\Python311 and select all the options changing Python directory to C:\Python311 for the script to work.
-    echo If you have installed it already, you can continue with the next steps.
     pause
     goto CheckforPython3.11
 ) else (
-    :: Creating a shortcut to the installer on the Desktop if the download succeeded
     echo %date% %time% - Creating a shortcut to the Python installer on the Desktop... >> %LOGFILE%
     @powershell -NoProfile -ExecutionPolicy Bypass -Command "$WScriptShell = New-Object -ComObject WScript.Shell; $Shortcut = $WScriptShell.CreateShortcut('$env:USERPROFILE\Desktop\Python 3.11.6 Installer.lnk'); $Shortcut.TargetPath = '%PYTHON_INSTALLER_PATH%'; $Shortcut.Save()"
     echo %date% %time% - Shortcut created. >> %LOGFILE%
@@ -174,15 +190,10 @@ cls && goto VerifyPython3.11
 
 :VerifyPython3.11
 echo Checking for Python in PATH... >> %LOGFILE%
-echo Checking for Python in PATH...
 set python_path=C:\Python311\python.exe
 if exist "!python_path!" (
     echo Found !python_path! >> %LOGFILE%
-    echo Found !python_path!
     "!python_path!" --version >> %LOGFILE%
-    "!python_path!" --version
-    echo. >> %LOGFILE%
-    echo.
     goto Beginactualscriptcommands
 ) else (
     echo Python 3.11.6 not found at expected location. >> %LOGFILE%
@@ -229,7 +240,6 @@ if errorlevel 1 (
     echo Success: setuptools installed/upgraded successfully >> %LOGFILE%
 )
 
-
 echo Installing/upgrading pyqt5-tools for Python 3.11... >> %LOGFILE%
 "!python_path!" -m pip install --upgrade pyqt5-tools
 if errorlevel 1 (
@@ -255,7 +265,8 @@ if errorlevel 1 (
 )
 
 echo Installing/upgrading requests for Python 3.11... >> %LOGFILE%
-"!python_path!" -m pip install --upgrade requests
+"!python_path!" -m pip ```batch
+install --upgrade requests
 if errorlevel 1 (
     echo Error: Failed to install/upgrade requests >> %LOGFILE%
 ) else (
@@ -277,6 +288,7 @@ if errorlevel 1 (
 ) else (
     echo Success: pywin32 installed/upgraded successfully >> %LOGFILE%
 )
+
 cls
 
 :DownloadNexTool
@@ -286,7 +298,7 @@ aria2c --disable-ipv6 -x 4 -o "NexTool.py" -d "C:\NexTool" --allow-overwrite=tru
 if "%errorlevel%"=="0" (
     echo %date% %time% - Downloaded successfully with aria2 >> %LOGFILE%
     endlocal && set "DOWNLOAD_RESULT=0"
-    goto :LaunchNexTool
+    goto LaunchNexTool
 ) else (
     echo %date% %time% - Failed to download with aria2. Trying PowerShell... >> %LOGFILE%
     pwsh -Command "Invoke-WebRequest -Uri 'https://raw.githubusercontent.com/coff33ninja/NexTool-Windows-Suite/main/NexTool.py' -OutFile 'C:\NexTool\NexTool.py'"
@@ -297,7 +309,7 @@ if "%errorlevel%"=="0" (
         echo %date% %time% - Download failed with both methods >> %LOGFILE%
         endlocal && set "DOWNLOAD_RESULT=1"
     )
-    goto :LaunchNexTool
+    goto LaunchNexTool
 )
 
 :LaunchNexTool
@@ -320,6 +332,7 @@ if errorlevel 1 (
     echo Some installations failed. Check the log for details. >> %LOGFILE%
     echo Some installations failed. Check the log for details.
 )
+
 pause
 
 set /p user_input="Do you want to review the log? (yes/no): "
