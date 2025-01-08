@@ -9,33 +9,14 @@ Function LogWrite {
     Write-Host $logEntry
 }
 
-# Function to check if a command exists
+# Function to test if a command exists
 Function Test-Command {
     Param ([string]$command)
     return Get-Command $command -ErrorAction SilentlyContinue
 }
 
-# Function to install Chocolatey
-Function Install-Chocolatey {
-    LogWrite 'Installing Chocolatey...'
-    Set-ExecutionPolicy Bypass -Scope Process -Force
-    Invoke-Expression ((New-Object System.Net.WebClient).DownloadString('https://chocolatey.org/install.ps1'))
-
-    # After installation, launch a new terminal to continue
-    LogWrite 'Launching a new PowerShell session to continue with Chocolatey commands...'
-    Start-Process -FilePath 'powershell.exe' -ArgumentList "-NoProfile -ExecutionPolicy Bypass -Command `"& {`"$PSCommandPath`"}`" -Verb RunAs"
-    exit
-}
-
-# Function to download a file from a URL to a destination
-Function DownloadFile {
-    Param ([string]$url, [string]$destination)
-    $wc = New-Object System.Net.WebClient
-    $wc.DownloadFile($url, $destination)
-}
-
-# Function to check Windows version
-Function Get-WindowsVersion {
+# Function to test Windows version compatibility
+Function Test-WindowsVersion {
     $version = [System.Environment]::OSVersion.Version
     if ($version.Major -lt 10) {
         LogWrite 'Winget is only available for Windows 10 and later. Exiting script.'
@@ -67,140 +48,77 @@ if ($LASTEXITCODE -ne 0) {
 }
 
 # Check Windows version
-Check-WindowsVersion
+Test-WindowsVersion
 
 # Check and Install Chocolatey
-LogWrite 'Checking Chocolatey installation'
-if (-not (Check-Command choco)) {
-    Install-Chocolatey
-    # The script will exit here, and the new terminal will take over
-}
-else {
+LogWrite 'Checking Chocolatey installation...'
+if (-not (Test-Command choco)) {
+    LogWrite 'Chocolatey not detected. Attempting installation...'
+    Set-ExecutionPolicy Bypass -Scope Process -Force
+    Invoke-Expression ((New-Object System.Net.WebClient).DownloadString('https://chocolatey.org/install.ps1'))
+    RefreshEnv
+    LogWrite 'Chocolatey installed successfully.'
+} else {
     LogWrite 'Chocolatey is already installed.'
 }
 
 # Check and Install Winget
-LogWrite 'Checking Winget installation'
-if (-not (Check-Command winget)) {
+LogWrite 'Checking Winget installation...'
+if (-not (Test-Command winget)) {
     LogWrite 'Winget not detected. Attempting installation...'
     choco install winget -y
-}
-else {
-    LogWrite 'Winget is already installed. Checking for updates...'
-    choco upgrade winget -y
+} else {
+    LogWrite 'Winget is already installed.'
 }
 
 # Check and Install aria2c
-LogWrite 'Checking aria2c installation'
-if (-not (Check-Command aria2c)) {
+LogWrite 'Checking aria2c installation...'
+if (-not (Test-Command aria2c)) {
     LogWrite 'aria2c not detected. Installing...'
     choco install aria2 -y
-}
-else {
+} else {
     LogWrite 'aria2c is already installed.'
 }
 
 # Check and Install PowerShell Core
-LogWrite 'Checking PowerShell Core installation'
-if (-not (Check-Command pwsh)) {
+LogWrite 'Checking PowerShell Core installation...'
+if (-not (Test-Command pwsh)) {
     LogWrite 'PowerShell Core not detected. Installing...'
     choco install powershell-core -y
-}
-else {
-    LogWrite 'PowerShell Core is already installed. Checking for updates...'
-    choco upgrade powershell-core -y
+} else {
+    LogWrite 'PowerShell Core is already installed.'
 }
 
-# Function to install Python in a new terminal
-Function Install-Python {
-    LogWrite 'Installing Python...'
-    DownloadFile 'https://www.python.org/ftp/python/3.11.6/python-3.11.9-amd64.exe' 'C:\NexTool\python-3.11.6-amd64.exe'
-    Start-Process 'C:\NexTool\python-3.11.9-amd64.exe' -ArgumentList '/quiet InstallAllUsers=1 PrependPath=1 TargetDir=C:\Python311' -Wait
-
-    LogWrite 'Launching new terminal to verify Python installation and upgrade pip...'
-    Start-Process powershell.exe -ArgumentList "-NoProfile -ExecutionPolicy Bypass -Command `"python --version; python -m pip install --upgrade pip; exit`"" -Verb RunAs -Wait
-}
-
-# Main Script Execution
-LogWrite 'Checking Chocolatey installation...'
-if (-not (Check-Command choco)) {
-    Install-Chocolatey
-}
-else {
-    LogWrite 'Chocolatey is already installed.'
-}
-
-LogWrite 'Checking Python installation...'
+# Check for Python, download and install if necessary
 $pythonPath = 'C:\Python311\python.exe'
 if (-not (Test-Path $pythonPath)) {
-    Install-Python
-}
-else {
-    LogWrite "Python found at $pythonPath. Upgrading pip..."
-    Start-Process powershell.exe -ArgumentList "-NoProfile -ExecutionPolicy Bypass -Command `"python -m pip install --upgrade pip; exit`"" -Verb RunAs -Wait
+    LogWrite 'Python not detected. Attempting download...'
+    Invoke-WebRequest 'https://www.python.org/ftp/python/3.11.6/python-3.11.6-amd64.exe' -OutFile 'C:\NexTool\python-3.11.6-amd64.exe'
+    LogWrite 'Installing Python...'
+    Start-Process 'C:\NexTool\python-3.11.6-amd64.exe' -ArgumentList '/quiet InstallAllUsers=1 PrependPath=1 TargetDir=C:\Python311' -Wait
+    LogWrite 'Python installed successfully.'
+} else {
+    LogWrite "Python found at $pythonPath."
 }
 
 # Upgrade pip
 LogWrite 'Upgrading pip...'
 & $pythonPath -m pip install --upgrade pip
-if ($LASTEXITCODE -ne 0) {
-    LogWrite 'Error: Failed to upgrade pip.'
-    exit
-}
-else {
-    LogWrite 'Successfully upgraded pip.'
-}
 
 # Install required Python packages
 $packages = @('setuptools', 'pyqt5-tools', 'PyQt5-stubs', 'pyqtgraph', 'requests', 'psutil', 'pywin32')
 foreach ($package in $packages) {
     LogWrite "Installing/upgrading $package..."
     & $pythonPath -m pip install --upgrade $package
-    if ($LASTEXITCODE -ne 0) {
-        LogWrite "Error: Failed to install/upgrade $package."
-    }
-    else {
-        LogWrite "Success: $package installed/upgraded successfully."
-    }
 }
 
 # Download NexTool.py
-LogWrite 'Attempting to download NexTool.py...'
-DownloadFile 'https://raw.githubusercontent.com/coff33ninja/NexTool-Windows-Suite/main/NexTool.py' 'C:\NexTool\NexTool.py'
-if ($LASTEXITCODE -eq 0) {
-    LogWrite 'Downloaded NexTool.py successfully.'
-    LogWrite 'Launching NexTool.py...'
-    Start-Process $pythonPath 'C:\NexTool\NexTool.py'
-}
-else {
-    LogWrite 'Failed to download NexTool.py.'
-}
+LogWrite 'Downloading NexTool.py...'
+Invoke-WebRequest 'https://raw.githubusercontent.com/coff33ninja/NexTool-Windows-Suite/main/NexTool.py' -OutFile 'C:\NexTool\NexTool.py'
 
-# Summary of installations
-LogWrite 'Installation Summary:'
-$logContent = Get-Content $LOGFILE
-if ($logContent -match 'Error') {
-    LogWrite 'Some installations failed. Check the log for details.'
-}
-else {
-    LogWrite 'All installations were successful!'
-}
+# Launch NexTool.py
+LogWrite 'Launching NexTool.py...'
+Start-Process $pythonPath 'C:\NexTool\NexTool.py'
 
-# Prompt user to review the log
-$userInput = Read-Host 'Do you want to review the log? (yes/no)'
-if ($userInput -eq 'yes') {
-    Start-Process notepad.exe $LOGFILE
-}
-
-# Cleanup logic
-LogWrite 'Cleaning up...'
-if (Test-Path 'C:\NexTool') {
-    Remove-Item 'C:\NexTool\*' -Recurse -Force
-    Remove-Item 'C:\NexTool' -Force
-    LogWrite 'Cleanup complete.'
-}
-else {
-    LogWrite 'C:\NexTool does not exist. No cleanup necessary.'
-}
-
+# Script complete
 LogWrite 'Script completed.'

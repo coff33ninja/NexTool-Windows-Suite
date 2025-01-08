@@ -1,0 +1,48 @@
+2025-01-08 17:10:26,619 - ERROR - Error Caught: Traceback (most recent call last):
+  File "C:\NexTool\NexTool.py", line 3948, in <module>
+    window = CustomUI()
+             ^^^^^^^^^^
+  File "C:\NexTool\NexTool.py", line 3019, in __init__
+    self.construct_menu(tabs)
+  File "C:\NexTool\NexTool.py", line 3091, in construct_menu
+    consolidated_info_text = consolidate_info(get_system_information())
+                                              ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\NexTool\NexTool.py", line 106, in get_system_information
+    subprocess.check_output("wmic cpu get Name", stderr=subprocess.DEVNULL)
+  File "C:\Python311\Lib\subprocess.py", line 466, in check_output
+    return run(*popenargs, stdout=PIPE, timeout=timeout, check=True,
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Python311\Lib\subprocess.py", line 548, in run
+    with Popen(*popenargs, **kwargs) as process:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Python311\Lib\subprocess.py", line 1026, in __init__
+    self._execute_child(args, executable, preexec_fn, close_fds,
+  File "C:\Python311\Lib\subprocess.py", line 1538, in _execute_child
+    hp, ht, pid, tid = _winapi.CreateProcess(executable, args,
+                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+FileNotFoundError: [WinError 2] The system cannot find the file specified
+
+2025-01-08 17:12:38,390 - ERROR - Error Caught: Traceback (most recent call last):
+  File "C:\NexTool\NexTool.py", line 3948, in <module>
+    window = CustomUI()
+             ^^^^^^^^^^
+  File "C:\NexTool\NexTool.py", line 3019, in __init__
+    self.construct_menu(tabs)
+  File "C:\NexTool\NexTool.py", line 3091, in construct_menu
+    consolidated_info_text = consolidate_info(get_system_information())
+                                              ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\NexTool\NexTool.py", line 106, in get_system_information
+    subprocess.check_output("wmic cpu get Name", stderr=subprocess.DEVNULL)
+  File "C:\Python311\Lib\subprocess.py", line 466, in check_output
+    return run(*popenargs, stdout=PIPE, timeout=timeout, check=True,
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Python311\Lib\subprocess.py", line 548, in run
+    with Popen(*popenargs, **kwargs) as process:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Python311\Lib\subprocess.py", line 1026, in __init__
+    self._execute_child(args, executable, preexec_fn, close_fds,
+  File "C:\Python311\Lib\subprocess.py", line 1538, in _execute_child
+    hp, ht, pid, tid = _winapi.CreateProcess(executable, args,
+                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+FileNotFoundError: [WinError 2] The system cannot find the file specified
+
