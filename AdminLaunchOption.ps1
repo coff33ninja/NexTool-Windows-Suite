@@ -10,16 +10,21 @@ Function LogWrite {
 }
 
 # Function to check if a command exists
-Function Check-Command {
+Function Test-Command {
     Param ([string]$command)
     return Get-Command $command -ErrorAction SilentlyContinue
 }
 
 # Function to install Chocolatey
 Function Install-Chocolatey {
+    LogWrite 'Installing Chocolatey...'
     Set-ExecutionPolicy Bypass -Scope Process -Force
     Invoke-Expression ((New-Object System.Net.WebClient).DownloadString('https://chocolatey.org/install.ps1'))
-    RefreshEnv
+
+    # After installation, launch a new terminal to continue
+    LogWrite 'Launching a new PowerShell session to continue with Chocolatey commands...'
+    Start-Process -FilePath 'powershell.exe' -ArgumentList "-NoProfile -ExecutionPolicy Bypass -Command `"& {`"$PSCommandPath`"}`" -Verb RunAs"
+    exit
 }
 
 # Function to download a file from a URL to a destination
@@ -30,7 +35,7 @@ Function DownloadFile {
 }
 
 # Function to check Windows version
-Function Check-WindowsVersion {
+Function Get-WindowsVersion {
     $version = [System.Environment]::OSVersion.Version
     if ($version.Major -lt 10) {
         LogWrite 'Winget is only available for Windows 10 and later. Exiting script.'
@@ -67,13 +72,8 @@ Check-WindowsVersion
 # Check and Install Chocolatey
 LogWrite 'Checking Chocolatey installation'
 if (-not (Check-Command choco)) {
-    LogWrite 'Chocolatey not detected. Attempting installation...'
     Install-Chocolatey
-    if (-not (Check-Command choco)) {
-        LogWrite 'Error: Failed to install Chocolatey!'
-        exit
-    }
-    LogWrite 'Chocolatey installed successfully.'
+    # The script will exit here, and the new terminal will take over
 }
 else {
     LogWrite 'Chocolatey is already installed.'
@@ -111,28 +111,33 @@ else {
     choco upgrade powershell-core -y
 }
 
-# Check for Python, download and install if necessary
-$pythonPath = 'C:\Python311\python.exe'
-if (-not (Test-Path $pythonPath)) {
-    LogWrite 'Python not detected. Attempting download...'
-    DownloadFile 'https://www.python.org/ftp/python/3.11.6/python-3.11.6-amd64.exe' 'C:\NexTool\python-3.11.6-amd64.exe'
-    if ($LASTEXITCODE -eq 0) {
-        LogWrite 'Downloaded Python installer successfully.'
-        LogWrite 'Installing Python...'
-        Start-Process 'C:\NexTool\python-3.11.6-amd64.exe' -ArgumentList '/quiet InstallAllUsers=1 PrependPath=1 TargetDir=C:\Python311' -Wait
-        if ($LASTEXITCODE -ne 0) {
-            LogWrite 'Failed to install Python.'
-            exit
-        }
-        LogWrite 'Python installed successfully.'
-    }
-    else {
-        LogWrite 'Failed to download Python installer.'
-        exit
-    }
+# Function to install Python in a new terminal
+Function Install-Python {
+    LogWrite 'Installing Python...'
+    DownloadFile 'https://www.python.org/ftp/python/3.11.6/python-3.11.9-amd64.exe' 'C:\NexTool\python-3.11.6-amd64.exe'
+    Start-Process 'C:\NexTool\python-3.11.9-amd64.exe' -ArgumentList '/quiet InstallAllUsers=1 PrependPath=1 TargetDir=C:\Python311' -Wait
+
+    LogWrite 'Launching new terminal to verify Python installation and upgrade pip...'
+    Start-Process powershell.exe -ArgumentList "-NoProfile -ExecutionPolicy Bypass -Command `"python --version; python -m pip install --upgrade pip; exit`"" -Verb RunAs -Wait
+}
+
+# Main Script Execution
+LogWrite 'Checking Chocolatey installation...'
+if (-not (Check-Command choco)) {
+    Install-Chocolatey
 }
 else {
-    LogWrite "Python found at $pythonPath."
+    LogWrite 'Chocolatey is already installed.'
+}
+
+LogWrite 'Checking Python installation...'
+$pythonPath = 'C:\Python311\python.exe'
+if (-not (Test-Path $pythonPath)) {
+    Install-Python
+}
+else {
+    LogWrite "Python found at $pythonPath. Upgrading pip..."
+    Start-Process powershell.exe -ArgumentList "-NoProfile -ExecutionPolicy Bypass -Command `"python -m pip install --upgrade pip; exit`"" -Verb RunAs -Wait
 }
 
 # Upgrade pip
