@@ -69,6 +69,9 @@
   - **End Line**: 413
   - **Description**: Launches the Winget GUI, allowing users to manage packages installed via the Windows Package Manager.
 
+- **Function**: `run_office_tool()`
+  - **Description**: Manages the Office installation process, downloading necessary files and executing the installation script.
+
 ## Maintenance
 - **Function**: `launch_disk_cleanup()`
   - **Start Line**: 416
@@ -95,7 +98,81 @@
   - **End Line**: 433
   - **Description**: Launches the WMI reset tool, which can help resolve issues with Windows Management Instrumentation.
 
-## Additional Notes
-- Each function is designed to handle specific tasks related to system management, network configuration, security settings, and software management.
-- The functions may interact with external scripts or tools, which are located in the `Modules` directory or other relevant directories within the project.
-- For example, the Office package could be integrated and upgraded alongside this script to create a more modularized package, enhancing maintainability and scalability.
+## Additional Functions
+- **Function**: `excepthook`
+  - **Description**: Handles uncaught exceptions and logs them to a file.
+
+- **Function**: `is_dark_mode`
+  - **Description**: Checks if the system is in dark mode.
+
+- **Function**: `ManualConfigDialog`
+  - **Description**: Dialog for manual network configuration.
+
+- **Function**: `PingResultsDialog`
+  - **Description**: Dialog for displaying ping results.
+
+- **Function**: `TracerouteDialog`
+  - **Description**: Dialog for performing traceroute operations.
+
+- **Function**: `NetworkShareDialog`
+  - **Description**: Dialog for managing network shares.
+
+- **Function**: `WifiPasswordDialog`
+  - **Description**: Dialog for extracting Wi-Fi passwords.
+
+- **Function**: `DefenderDialog`
+  - **Description**: Dialog for enabling/disabling Windows Defender.
+
+- **Function**: `RemoveDefenderDialog`
+  - **Description**: Dialog for removing Windows Defender.
+
+- **Function**: `TelemetryManagementDialog`
+  - **Description**: Dialog for managing telemetry settings.
+
+- **Function**: `SystemManagerUI`
+  - **Description**: User interface for managing system services and settings.
+
+- **Function**: `SystemManager`
+  - **Description**: Class for managing system services.
+
+- **Function**: `MASTool`
+  - **Description**: Tool for running Microsoft Activation Script.
+
+- **Function**: `WindowsUpdaterTool`
+  - **Description**: Tool for managing Windows updates.
+
+- **Function**: `PatchMyPCTool`
+  - **Description**: Tool for managing PatchMyPC operations.
+
+- **Function**: `ChocolateyGUI`
+  - **Description**: GUI for managing Chocolatey packages.
+
+- **Function**: `WingetGUI`
+  - **Description**: GUI for managing Winget packages.
+
+- **Function**: `DiskCleanupThread`
+  - **Description**: Thread for performing disk cleanup.
+
+- **Function**: `DiskCleanerApp`
+  - **Description**: Application for managing disk cleanup.
+
+- **Function**: `DiskCheckThread`
+  - **Description**: Thread for checking disk health.
+
+- **Function**: `DiskCheckApp`
+  - **Description**: Application for checking disk health.
+
+- **Function**: `DISM_SFC_Thread`
+  - **Description**: Thread for running DISM and SFC commands.
+
+- **Function**: `SystemCheckApp`
+  - **Description**: Application for running system checks.
+
+- **Function**: `GroupPolicyResetApp`
+  - **Description**: Application for resetting group policies.
+
+- **Function**: `WMIResetApp`
+  - **Description**: Application for resetting WMI.
+
+- **Function**: `CustomUI`
+  - **Description**: Main user interface for the application.
