@@ -4,8 +4,8 @@ import platform
 import urllib.request
 import zipfile
 import subprocess
-from PyQt5.QtWidgets import QApplication, QMainWindow, QProgressBar, QVBoxLayout, QPushButton, QWidget, QTextEdit
-from PyQt5.QtCore import QThread, pyqtSignal, pyqtSlot
+from PySide6.QtWidgets import QApplication, QMainWindow, QProgressBar, QVBoxLayout, QPushButton, QWidget, QTextEdit
+from PySide6.QtCore import QThread, Signal as pyqtSignal, Slot as pyqtSlot
 
 class OfficeSetupManager:
     BASE_DIR = "C:\\NexTool"
