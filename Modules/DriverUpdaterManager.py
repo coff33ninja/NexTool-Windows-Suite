@@ -5,8 +5,8 @@ import zipfile
 import subprocess
 import requests
 from typing import Callable
-from PyQt5.QtWidgets import QApplication, QMainWindow, QProgressBar, QVBoxLayout, QPushButton, QTextEdit, QWidget
-from PyQt5.QtCore import QThread, pyqtSignal, pyqtSlot, QObject
+from PySide6.QtWidgets import QApplication, QMainWindow, QProgressBar, QVBoxLayout, QPushButton, QTextEdit, QWidget
+from PySide6.QtCore import QThread, Signal as pyqtSignal, Slot as pyqtSlot, QObject
 
 
 class DriverUpdaterManager(QObject):

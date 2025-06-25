@@ -5,11 +5,11 @@ import shutil
 import ctypes
 import threading
 import comtypes.client
-from PyQt5.QtWidgets import (QApplication, QMainWindow, QPushButton, QVBoxLayout,
+from PySide6.QtWidgets import (QApplication, QMainWindow, QPushButton, QVBoxLayout,
                              QWidget, QFileDialog, QMessageBox, QSplitter, QProgressBar,
                              QTextEdit, QLabel, QHBoxLayout)
-from PyQt5.QtCore import Qt
-from PyQt5.QtCore import pyqtSignal
+from PySide6.QtCore import Qt
+from PySide6.QtCore import Signal as pyqtSignal
 from datetime import datetime
 # python3.11 -m pip install PyQt5 comtypes pyqt5-tools
 # pip3.11 install PyQt5 comtypes pyqt5-tools
