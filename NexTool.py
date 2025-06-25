@@ -17,17 +17,17 @@ from typing import Any, Dict, List, Optional
 
 import psutil
 import requests
-from PyQt5.QtCore import (
+from PySide6.QtCore import (
     Qt,
     QPropertyAnimation,
     QEasingCurve,
     QThread,
-    pyqtSignal,
+    Signal as pyqtSignal,
     QTimer,
     QUrl,
 )
-from PyQt5.QtGui import QFont, QDesktopServices
-from PyQt5.QtWidgets import (
+from PySide6.QtGui import QFont, QDesktopServices
+from PySide6.QtWidgets import (
     QApplication,
     QMainWindow,
     QVBoxLayout,
