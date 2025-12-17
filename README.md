@@ -1,6 +1,21 @@
 # NexTool Windows Suite 🛠️
 
-## Introduction
+> ## ⚠️ DISCONTINUED
+> 
+> **NexTool Windows Suite has been discontinued and replaced by [System Optimizer](https://github.com/coff33ninja/System_Optimizer).**
+> 
+> System Optimizer consolidates all features from NexTool and AIO into a single, dependency-free PowerShell script. No Python, no Chocolatey prerequisites - just run and go.
+> 
+> **Quick Start:**
+> ```powershell
+> irm "https://raw.githubusercontent.com/coff33ninja/System_Optimizer/main/win11_ultimate_optimization.ps1" | iex
+> ```
+> 
+> This repository is archived for reference only.
+
+---
+
+## Introduction (Legacy)
 
 NexTool Windows Suite offers an all-in-one solution for Windows users, ranging from enthusiasts to IT professionals. It's designed to simplify and optimize the Windows environment, making complex tasks straightforward.
 
